@@ -71,6 +71,7 @@ public partial class App : Application
         Cfg = Config.Load();
         Theme.LoadCustom();
         Sounds.Volume = Cfg.Volume;
+        Sounds.Files = new(Cfg.SoundFiles);
 
         if (args.Contains("--updated")) Installer.RefreshVersion();
         else if (!handover && OfferInstall()) { Shutdown(); return; }
@@ -257,6 +258,7 @@ public partial class App : Application
     {
         Cfg.Save();
         Sounds.Volume = Cfg.Volume;
+        Sounds.Files = new(Cfg.SoundFiles);
         _win.ApplyScale();
         _win.View.ApplyTheme(_previewTheme ?? Theme.ByName(Cfg.Theme));
         _win.View.ResetIdle();

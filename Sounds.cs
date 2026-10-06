@@ -8,8 +8,8 @@ public enum SoundKind { Join, Leave, Favorite, Message, Poke, MuteWarning }
 
 /// <summary>
 /// Krótkie sygnały dźwiękowe z regulacją głośności. Domyślne dźwięki są generowane w pamięci.
-/// Własne: join.wav / leave.wav / message.wav / poke.wav w %APPDATA%\TS6Overlay
-/// albo osobny plik dla każdego ulubionego.
+/// Własne dźwięki przypisuje się w ustawieniach (kopia trafia do %APPDATA%\TS6Overlay\sounds);
+/// starsze pliki join.wav / leave.wav … w %APPDATA%\TS6Overlay też działają.
 /// </summary>
 public static class Sounds
 {
@@ -20,13 +20,55 @@ public static class Sounds
     static readonly object Lock = new();
 
     public static int Volume { get; set; } = 60;
+    /// <summary>Dłuższe pliki są ucinane — powiadomienie nie może grać w nieskończoność.</summary>
+    public const double MaxSeconds = 8;
+    public static readonly string[] Extensions = { ".wav", ".mp3", ".wma", ".aiff", ".m4a" };
+    public static string Dir => Path.Combine(Config.Dir, "sounds");
+
+    /// <summary>Przypisania z ustawień (ustawiane przez App przy każdej zmianie konfiguracji).</summary>
+    public static Dictionary<string, string> Files { get; set; } = new();
+
+    public static string? AssignedFile(SoundKind kind) =>
+        Files.TryGetValue(kind.ToString(), out var f) && File.Exists(f) ? f : null;
+
+    /// <summary>
+    /// Kopiuje wybrany plik do folderu dźwięków pod nazwą <paramref name="key"/> i sprawdza, czy da się go odtworzyć.
+    /// Zwraca ścieżkę kopii i długość nagrania.
+    /// </summary>
+    public static (string path, TimeSpan length) Import(string source, string key)
+    {
+        string ext = Path.GetExtension(source).ToLowerInvariant();
+        if (!Extensions.Contains(ext)) throw new InvalidDataException("Obsługiwane formaty: " + string.Join(", ", Extensions));
+        TimeSpan len;
+        using (var test = new AudioFileReader(source)) len = test.TotalTime;
+        if (len <= TimeSpan.Zero) throw new InvalidDataException("Plik nie zawiera dźwięku.");
+
+        Directory.CreateDirectory(Dir);
+        string safe = string.Concat(key.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        foreach (var old in Directory.GetFiles(Dir, safe + ".*")) TryDelete(old);
+        string dest = Path.Combine(Dir, safe + ext);
+        File.Copy(source, dest, true);
+        return (dest, len);
+    }
+
+    public static void TryDelete(string? path)
+    {
+        try { if (!string.IsNullOrEmpty(path) && path.StartsWith(Dir, StringComparison.OrdinalIgnoreCase) && File.Exists(path)) File.Delete(path); }
+        catch { }
+    }
+
+    public static TimeSpan Length(string path)
+    {
+        try { using var r = new AudioFileReader(path); return r.TotalTime; }
+        catch { return TimeSpan.Zero; }
+    }
 
     public static void Play(SoundKind kind, string? customPath = null)
     {
         try
         {
-            string? file = customPath;
-            if (string.IsNullOrEmpty(file) || !File.Exists(file))
+            string? file = !string.IsNullOrEmpty(customPath) && File.Exists(customPath) ? customPath : AssignedFile(kind);
+            if (file == null)
             {
                 string name = kind switch
                 {
@@ -39,7 +81,10 @@ public static class Sounds
             ISampleProvider src;
             AudioFileReader? reader = null;
             if (file != null)
-                src = reader = new AudioFileReader(file);
+            {
+                reader = new AudioFileReader(file);
+                src = new OffsetSampleProvider(reader) { Take = TimeSpan.FromSeconds(MaxSeconds) };
+            }
             else
             {
                 var data = Generated(kind);

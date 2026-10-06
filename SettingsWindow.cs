@@ -432,18 +432,23 @@ public sealed class SettingsWindow : Window
 
         p.Children.Add(Header("Dźwięki"));
         p.Children.Add(SliderRow("Głośność", 0, 100, () => _cfg.Volume, v => _cfg.Volume = (int)v, v => $"{v:0}%"));
+        p.Children.Add(Hint("Każdemu zdarzeniu możesz przypisać własny dźwięk: kliknij „Wybierz…” albo przeciągnij plik (.wav, .mp3, .wma, .aiff, .m4a) na wiersz. " +
+                            $"Program kopiuje plik do swojego folderu, a odtwarza najwyżej {Sounds.MaxSeconds:0} s."));
         p.Children.Add(SoundRow("Gdy ktoś wchodzi na kanał", () => _cfg.SoundOnJoin, v => _cfg.SoundOnJoin = v, SoundKind.Join));
         p.Children.Add(SoundRow("Gdy ktoś wychodzi z kanału", () => _cfg.SoundOnLeave, v => _cfg.SoundOnLeave = v, SoundKind.Leave));
         p.Children.Add(SoundRow("Wiadomość", () => _cfg.SoundOnMessage, v => _cfg.SoundOnMessage = v, SoundKind.Message));
         p.Children.Add(SoundRow("Szturchnięcie", () => _cfg.SoundOnPoke, v => _cfg.SoundOnPoke = v, SoundKind.Poke));
-        p.Children.Add(Row(Label("     Wejście ulubionego", 268), Btn("▶ Test", () => Sounds.Play(SoundKind.Favorite))));
-        p.Children.Add(Hint("Własne dźwięki: wrzuć join / leave / message / poke / favorite / mute (.wav lub .mp3) do folderu ustawień."));
-        p.Children.Add(Row(Btn("Otwórz folder ustawień", () => Process.Start(new ProcessStartInfo("explorer.exe", Config.Dir)))));
+        p.Children.Add(SoundRow("Wejście ulubionego (domyślny)", null, null, SoundKind.Favorite));
+        p.Children.Add(SoundRow("Mówisz do wyciszonego mikrofonu", () => _cfg.MuteWarningSound, v => _cfg.MuteWarningSound = v, SoundKind.MuteWarning));
+        p.Children.Add(Row(Btn("Otwórz folder dźwięków", () =>
+        {
+            System.IO.Directory.CreateDirectory(Sounds.Dir);
+            Process.Start(new ProcessStartInfo("explorer.exe", Sounds.Dir));
+        })));
 
         p.Children.Add(Header("Mikrofon wyciszony"));
         p.Children.Add(Check("Pokazuj czerwony pasek, gdy mikrofon lub głośniki są wyciszone", () => _cfg.MuteWarning, v => _cfg.MuteWarning = v));
         p.Children.Add(Check("Ostrzegaj, gdy mówisz do wyciszonego mikrofonu (pasek miga)", () => _cfg.MuteVoiceDetect, v => _cfg.MuteVoiceDetect = v));
-        p.Children.Add(Check("Sygnał dźwiękowy przy mówieniu do wyciszonego mikrofonu", () => _cfg.MuteWarningSound, v => _cfg.MuteWarningSound = v));
         p.Children.Add(SliderRow("Czułość (niżej = czulej)", 1, 60, () => _cfg.MuteSensitivity, v => _cfg.MuteSensitivity = (int)v, v => $"{v:0}"));
 
         _micLevel = new ProgressBar { Width = 300, Height = 14, Minimum = 0, Maximum = 100, Foreground = AccentB, Background = InputBg, BorderBrush = Line };
@@ -460,11 +465,76 @@ public sealed class SettingsWindow : Window
         return Scroll(p);
     }
 
-    UIElement SoundRow(string label, Func<bool> get, Action<bool> set, SoundKind kind)
+    /// <summary>Wiersz zdarzenia: włącz/wyłącz, test, przypisanie własnego pliku (przycisk lub przeciągnij i upuść).</summary>
+    UIElement SoundRow(string label, Func<bool>? get, Action<bool>? set, SoundKind kind)
     {
-        var cb = Check(label, get, set);
-        cb.Width = 260;
-        return Row(cb, Btn("▶ Test", () => Sounds.Play(kind)));
+        UIElement head;
+        if (get != null && set != null)
+        {
+            head = Check(label, get, set);
+        }
+        else head = new TextBlock { Text = label, Foreground = Fg, Margin = new Thickness(22, 4, 0, 4) };
+
+        var file = new TextBlock { MaxWidth = 260, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        void Show()
+        {
+            var f = Sounds.AssignedFile(kind);
+            file.Text = f == null ? "dźwięk wbudowany" : $"♪ {System.IO.Path.GetFileName(f)} ({Sounds.Length(f).TotalSeconds:0.#} s)";
+            file.Foreground = f == null ? Dim : AccentB;
+            file.ToolTip = f;
+        }
+        Show();
+
+        void Assign(string source)
+        {
+            try
+            {
+                var (path, len) = Sounds.Import(source, kind.ToString().ToLowerInvariant());
+                _cfg.SoundFiles[kind.ToString()] = path;
+                Changed();
+                Show();
+                Sounds.Play(kind);
+                if (len.TotalSeconds > Sounds.MaxSeconds)
+                    Info($"Plik trwa {len.TotalSeconds:0} s — przy powiadomieniu zagra tylko pierwsze {Sounds.MaxSeconds:0} s.");
+            }
+            catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
+        }
+
+        var buttons = Row(
+            Btn("▶", () => Sounds.Play(kind)),
+            Btn("Wybierz…", () =>
+            {
+                var d = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Dźwięk: " + label,
+                    Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a",
+                };
+                if (d.ShowDialog(this) == true) Assign(d.FileName);
+            }),
+            Btn("Wbudowany", () =>
+            {
+                if (_cfg.SoundFiles.Remove(kind.ToString(), out var old)) Sounds.TryDelete(old);
+                Changed();
+                Show();
+            }),
+            file);
+        buttons.Margin = new Thickness(22, 0, 0, 8);
+
+        var row = new StackPanel();
+        row.Children.Add(head);
+        row.Children.Add(buttons);
+        row.AllowDrop = true;
+        row.Background = Brushes.Transparent;   // żeby przeciąganie działało na całej szerokości
+        row.DragOver += (_, e) =>
+        {
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        };
+        row.Drop += (_, e) =>
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files) Assign(files[0]);
+        };
+        return row;
     }
 
     // =====================================================================
@@ -542,11 +612,20 @@ public sealed class SettingsWindow : Window
             _favList.Children.Add(Row(Label("★ " + f.Nickname, 200), swatch,
                 Btn(soundLabel, () =>
                 {
-                    var d = new Microsoft.Win32.OpenFileDialog { Filter = "Dźwięk (*.wav;*.mp3)|*.wav;*.mp3", Title = $"Dźwięk wejścia: {f.Nickname}" };
-                    if (d.ShowDialog(this) == true) { f.SoundPath = d.FileName; RebuildPeople(); Changed(); }
+                    var d = new Microsoft.Win32.OpenFileDialog { Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a", Title = $"Dźwięk wejścia: {f.Nickname}" };
+                    if (d.ShowDialog(this) != true) return;
+                    try
+                    {
+                        var key = "fav-" + string.Concat(f.Uid.Where(char.IsLetterOrDigit).Take(16));
+                        var (path, _) = Sounds.Import(d.FileName, key);
+                        f.SoundPath = path;
+                        RebuildPeople(); Changed();
+                        Sounds.Play(SoundKind.Favorite, path);
+                    }
+                    catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
                 }),
                 Btn("▶", () => Sounds.Play(SoundKind.Favorite, f.SoundPath)),
-                Btn("Wbudowany", () => { f.SoundPath = ""; RebuildPeople(); Changed(); }),
+                Btn("Wbudowany", () => { Sounds.TryDelete(f.SoundPath); f.SoundPath = ""; RebuildPeople(); Changed(); }),
                 Btn("Usuń", () => { _cfg.Favorites.Remove(f); RebuildPeople(); Changed(); })));
         }
 
@@ -747,9 +826,9 @@ public sealed class SettingsWindow : Window
     UIElement SliderRow(string label, double min, double max, Func<double> get, Action<double> set, Func<double, string> fmt)
     {
         var val = Label(fmt(get()), 60);
-        var s = new Slider { Minimum = min, Maximum = max, Value = get(), Width = 240, IsSnapToTickEnabled = true, TickFrequency = 1, VerticalAlignment = VerticalAlignment.Center };
+        var s = new Slider { Minimum = min, Maximum = max, Value = get(), Width = 220, IsSnapToTickEnabled = true, TickFrequency = 1, VerticalAlignment = VerticalAlignment.Center };
         s.ValueChanged += (_, _) => { set(s.Value); val.Text = fmt(s.Value); Changed(); };
-        return Row(Label(label, 250), s, val);
+        return Row(Label(label, 210), s, val);
     }
 
     static Brush Checker()

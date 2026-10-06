@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>TS6Overlay</AssemblyName>
     <RootNamespace>TS6Overlay</RootNamespace>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <Product>TS6 Overlay</Product>
     <Description>Nakładka TeamSpeak 6: kto mówi i kto wchodzi na kanał</Description>
