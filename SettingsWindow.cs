@@ -561,9 +561,14 @@ public sealed class SettingsWindow : Window
             _cfg.Binds.Add(b);
             Changed();
             RebuildBinds();
-        }, primary: true), Btn("■ Zatrzymaj odtwarzanie", () => _app.Binds.Stop())));
+        }, primary: true), Btn("■ Zatrzymaj wszystkie dźwięki", () => _app.Binds.StopAll())));
         _bindList = new StackPanel();
         p.Children.Add(_bindList);
+
+        p.Children.Add(Header("Klawisz „zatrzymaj wszystko”"));
+        p.Children.Add(Hint("Jeden skrót, który od razu ucina każdy grający dźwięk: klip z binda i sygnał powiadomienia. Przydaje się, gdy puścisz długi dźwięk i chcesz go uciszyć w trakcie gry."));
+        _stopRow = new ContentControl();
+        p.Children.Add(_stopRow);
 
         p.Children.Add(Header("Gdzie grać dźwięki bindów"));
         var dev = new ComboBox { MinWidth = 300 };
@@ -585,8 +590,30 @@ public sealed class SettingsWindow : Window
         return Scroll(p);
     }
 
+    ContentControl? _stopRow;
+
+    void RebuildStopRow()
+    {
+        if (_stopRow == null) return;
+        var s = _cfg.StopBind;
+        var keyBtn = Btn(s.KeyText, () => { });
+        keyBtn.MinWidth = 120;
+        keyBtn.ToolTip = "Kliknij i naciśnij klawisz lub skrót";
+        keyBtn.Click += (_, _) => StartCapture(s, keyBtn);
+        var row = Row(Label("Skrót:", 60), keyBtn, Btn("Usuń skrót", () => { s.Key = 0; s.Modifiers = 0; Changed(); RebuildBinds(); }));
+        var box = new StackPanel();
+        box.Children.Add(row);
+        string? warn = _app.Binds.Failed.Contains(s.Id) ? $"Skrót {s.KeyText} jest zajęty przez inny program — wybierz inny."
+            : s.Key != 0 && _cfg.Binds.Any(b => b.Enabled && b.Key == s.Key && b.Modifiers == s.Modifiers) ? "Ten sam skrót ma jeden z bindów."
+            : s.Key == 0 ? "Nie przypisano — kliknij przycisk i naciśnij np. Pause albo Ctrl+Alt+0." : null;
+        if (warn != null)
+            box.Children.Add(new TextBlock { Text = warn, Foreground = s.Key == 0 ? Dim : Brushes.IndianRed, FontSize = 12, Margin = new Thickness(0, 2, 0, 0) });
+        _stopRow.Content = box;
+    }
+
     void RebuildBinds()
     {
+        RebuildStopRow();
         if (_bindList == null) return;
         _bindList.Children.Clear();
         if (_cfg.Binds.Count == 0) _bindList.Children.Add(Hint("Nie masz jeszcze żadnych bindów — kliknij „+ Dodaj bind”."));
@@ -659,6 +686,11 @@ public sealed class SettingsWindow : Window
             {
                 Text = $"Skrót {b.KeyText} jest zajęty przez inny program — wybierz inny.",
                 Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
+            });
+        else if (b.Key != 0 && b.Enabled && _cfg.StopBind.Key == b.Key && _cfg.StopBind.Modifiers == b.Modifiers)
+            box.Children.Add(new TextBlock
+            {
+                Text = "Ten sam skrót ma klawisz „zatrzymaj wszystko”.", Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
             });
         else if (_cfg.Binds.Any(o => o != b && o.Enabled && b.Enabled && o.Key == b.Key && o.Modifiers == b.Modifiers && b.Key != 0))
             box.Children.Add(new TextBlock

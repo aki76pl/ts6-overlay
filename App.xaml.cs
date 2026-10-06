@@ -436,7 +436,7 @@ public partial class App : Application
         foreach (var b in Cfg.Binds.Where(x => x.Enabled && x.SoundPath != ""))
             binds.DropDownItems.Add(Item($"{b.Name}   [{b.KeyText}]", () => Binds.Trigger(b)));
         if (binds.DropDownItems.Count > 0) binds.DropDownItems.Add(new Forms.ToolStripSeparator());
-        binds.DropDownItems.Add(Item("Zatrzymaj odtwarzanie", () => Binds.Stop()));
+        binds.DropDownItems.Add(Item("Zatrzymaj wszystkie dźwięki" + (Cfg.StopBind.Key != 0 ? $"   [{Cfg.StopBind.KeyText}]" : ""), () => Binds.StopAll()));
         binds.DropDownItems.Add(Item("Ustaw bindy…", () => OpenSettings(SettingsWindow.TabBinds)));
         menu.Items.Add(binds);
 

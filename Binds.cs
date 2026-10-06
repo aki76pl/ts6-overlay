@@ -89,6 +89,13 @@ public sealed class BindManager : IDisposable
     {
         UnregisterAll();
         Failed.Clear();
+        // Skrót zatrzymania ma własne id, przed bindami.
+        var stop = _cfg.StopBind;
+        if (stop.Key != 0)
+        {
+            if (RegisterHotKey(_wnd.Handle, BaseId - 1, stop.Modifiers | MOD_NOREPEAT, (uint)stop.Key)) _registered[BaseId - 1] = stop;
+            else Failed.Add(stop.Id);
+        }
         int id = BaseId;
         foreach (var b in _cfg.Binds)
         {
@@ -111,7 +118,8 @@ public sealed class BindManager : IDisposable
     {
         if (msg == WM_HOTKEY && _registered.TryGetValue(w.ToInt32(), out var b))
         {
-            Trigger(b);
+            if (b == _cfg.StopBind) StopAll();
+            else Trigger(b);
             handled = true;
         }
         return IntPtr.Zero;
@@ -148,6 +156,13 @@ public sealed class BindManager : IDisposable
             catch { }
         }
         _playingId = b.Id;
+    }
+
+    /// <summary>Zatrzymuje wszystko: dźwięki bindów i bieżący sygnał powiadomienia.</summary>
+    public void StopAll()
+    {
+        Stop();
+        Sounds.Stop();
     }
 
     public void Stop()

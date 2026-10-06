@@ -77,6 +77,8 @@ public sealed class Config
 
     // --- bindy (soundboard) ---
     public List<SoundBind> Binds { get; set; } = new();
+    /// <summary>Skrót „zatrzymaj wszystkie dźwięki” (bindy i powiadomienia). Używane są tylko Key i Modifiers.</summary>
+    public SoundBind StopBind { get; set; } = new() { Id = "stop", Name = "Zatrzymaj wszystkie dźwięki" };
     /// <summary>Nazwa urządzenia wyjściowego dla bindów; pusta = domyślne (tylko Ty).</summary>
     public string BindDeviceName { get; set; } = "";
     /// <summary>Gdy wybrano inne urządzenie — odtwarzaj też na domyślnym, żebyś słyszał.</summary>

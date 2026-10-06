@@ -43,7 +43,7 @@ W **Ustawieniach → Powiadomienia** każde zdarzenie (wejście, wyjście, wiado
 
 ### Bindy
 
-W **Ustawieniach → Bindy** kliknij **+ Dodaj bind**, potem przycisk skrótu, i naciśnij klawisz albo kombinację (Esc anuluje, Backspace usuwa). Dźwięk wybierasz przyciskiem albo przeciągasz plik na wiersz binda. Ponowne naciśnięcie skrótu w trakcie odtwarzania zatrzymuje dźwięk. Bindy są też w menu ikony w zasobniku.
+W **Ustawieniach → Bindy** kliknij **+ Dodaj bind**, potem przycisk skrótu, i naciśnij klawisz albo kombinację (Esc anuluje, Backspace usuwa). Dźwięk wybierasz przyciskiem albo przeciągasz plik na wiersz binda. Ponowne naciśnięcie skrótu w trakcie odtwarzania zatrzymuje dźwięk. Możesz też ustawić osobny **klawisz „zatrzymaj wszystko”**, który ucina każdy grający dźwięk (bindy i powiadomienia). Bindy są też w menu ikony w zasobniku.
 
 Domyślnie dźwięki bindów słyszysz tylko Ty. Żeby słyszeli je inni na TeamSpeaku, zainstaluj wirtualny kabel audio (np. VB-Audio Virtual Cable), wybierz go w polu **Urządzenie** i podaj do TS razem z mikrofonem (np. przez VoiceMeeter).
 

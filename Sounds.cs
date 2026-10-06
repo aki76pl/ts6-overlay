@@ -106,6 +106,15 @@ public static class Sounds
         catch { }
     }
 
+    /// <summary>Przerywa bieżący dźwięk powiadomienia.</summary>
+    public static void Stop()
+    {
+        lock (Lock)
+        {
+            try { _out?.Stop(); } catch { }
+        }
+    }
+
     static float[] Generated(SoundKind kind)
     {
         lock (Cache)
