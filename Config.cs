@@ -75,6 +75,13 @@ public sealed class Config
     public List<Favorite> Favorites { get; set; } = new();
     public List<Ignored> IgnoredClients { get; set; } = new();
 
+    // --- bindy (soundboard) ---
+    public List<SoundBind> Binds { get; set; } = new();
+    /// <summary>Nazwa urządzenia wyjściowego dla bindów; pusta = domyślne (tylko Ty).</summary>
+    public string BindDeviceName { get; set; } = "";
+    /// <summary>Gdy wybrano inne urządzenie — odtwarzaj też na domyślnym, żebyś słyszał.</summary>
+    public bool BindAlsoLocal { get; set; } = true;
+
     // --- OBS ---
     public bool ObsEnabled { get; set; } = false;
     public int ObsPort { get; set; } = 5898;

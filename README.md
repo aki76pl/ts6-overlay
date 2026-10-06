@@ -18,6 +18,7 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 |---|---|
 | **Kto mówi** | lista osób na kanale; mówiący ma podświetlony wiersz i świecący znacznik, szept ma inny kolor |
 | **Wejścia i wyjścia** | powiadomienie i sygnał, gdy ktoś wchodzi na kanał lub go opuszcza |
+| **Bindy (soundboard)** | własne skróty klawiszowe (np. F9, Ctrl+1, Num 5), które odtwarzają wybrany dźwięk, również w grze; dźwięk może iść na osobne urządzenie, np. wirtualny kabel |
 | **Własne dźwięki** | do każdego zdarzenia przypiszesz swój plik `.wav` lub `.mp3` (przycisk albo przeciągnij i upuść) |
 | **Wiadomości i szturchnięcia** | prywatne, z kanału i z serwera (każdy rodzaj włączasz osobno); szturchnięcie trzęsie powiadomieniem |
 | **Mikrofon wyciszony** | czerwony pasek, gdy masz wyciszony mikrofon lub głośniki; gdy mówisz do wyciszonego mikrofonu, pasek miga i słychać sygnał |
@@ -39,6 +40,12 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 ### Własne dźwięki
 
 W **Ustawieniach → Powiadomienia** każde zdarzenie (wejście, wyjście, wiadomość, szturchnięcie, wejście ulubionego, mówienie do wyciszonego mikrofonu) ma przycisk **Wybierz…**. Plik możesz też przeciągnąć na wiersz zdarzenia. Program przyjmuje formaty `.wav`, `.mp3`, `.wma`, `.aiff` i `.m4a`, kopiuje plik do `%APPDATA%\TS6Overlay\sounds` i odtwarza najwyżej 8 sekund. Przycisk **Wbudowany** przywraca domyślny sygnał. Każdy ulubiony może mieć własny dźwięk wejścia, który ustawiasz w zakładce **Osoby**.
+
+### Bindy
+
+W **Ustawieniach → Bindy** kliknij **+ Dodaj bind**, potem przycisk skrótu, i naciśnij klawisz albo kombinację (Esc anuluje, Backspace usuwa). Dźwięk wybierasz przyciskiem albo przeciągasz plik na wiersz binda. Ponowne naciśnięcie skrótu w trakcie odtwarzania zatrzymuje dźwięk. Bindy są też w menu ikony w zasobniku.
+
+Domyślnie dźwięki bindów słyszysz tylko Ty. Żeby słyszeli je inni na TeamSpeaku, zainstaluj wirtualny kabel audio (np. VB-Audio Virtual Cable), wybierz go w polu **Urządzenie** i podaj do TS razem z mikrofonem (np. przez VoiceMeeter).
 
 ### OBS
 

@@ -14,6 +14,7 @@ public partial class App : Application
     public MicMonitor Mic { get; } = new();
     public ObsServer Obs { get; } = new();
     public Updater.Release? PendingUpdate { get; private set; }
+    public BindManager Binds { get; private set; } = null!;
 
     OverlayWindow _win = null!;
     Forms.NotifyIcon _tray = null!;
@@ -88,6 +89,7 @@ public partial class App : Application
 
         Mic.VoiceChanged += v => Dispatcher.BeginInvoke(() => OnVoiceWhileMuted(v));
 
+        Binds = new BindManager(Cfg);
         BuildTray();
         RegisterToggleHotkey();
         ListenForSecondInstance();
@@ -259,6 +261,7 @@ public partial class App : Application
         Cfg.Save();
         Sounds.Volume = Cfg.Volume;
         Sounds.Files = new(Cfg.SoundFiles);
+        if (!BindCapture) Binds.Register();
         _win.ApplyScale();
         _win.View.ApplyTheme(_previewTheme ?? Theme.ByName(Cfg.Theme));
         _win.View.ResetIdle();
@@ -271,6 +274,14 @@ public partial class App : Application
     }
 
     public bool ObsRunning { get; private set; }
+
+    /// <summary>Ustawienia nagrywają skrót — wyłącz bindy, żeby naciśnięty klawisz ich nie odpalił.</summary>
+    public bool BindCapture
+    {
+        get => _bindCapture;
+        set { _bindCapture = value; if (value) Binds.UnregisterAll(); else Binds.Register(); }
+    }
+    bool _bindCapture;
 
     /// <summary>Podgląd motywu z edytora na żywej nakładce (null = wróć do wybranego).</summary>
     public void PreviewTheme(Theme? t)
@@ -421,6 +432,14 @@ public partial class App : Application
         sound.DropDownItems.Add(Item("Szturchnięcia", () => { Cfg.SoundOnPoke = !Cfg.SoundOnPoke; ApplySettings(); if (Cfg.SoundOnPoke) Sounds.Play(SoundKind.Poke); }, Cfg.SoundOnPoke));
         menu.Items.Add(sound);
 
+        var binds = new Forms.ToolStripMenuItem("Bindy (soundboard)");
+        foreach (var b in Cfg.Binds.Where(x => x.Enabled && x.SoundPath != ""))
+            binds.DropDownItems.Add(Item($"{b.Name}   [{b.KeyText}]", () => Binds.Trigger(b)));
+        if (binds.DropDownItems.Count > 0) binds.DropDownItems.Add(new Forms.ToolStripSeparator());
+        binds.DropDownItems.Add(Item("Zatrzymaj odtwarzanie", () => Binds.Stop()));
+        binds.DropDownItems.Add(Item("Ustaw bindy…", () => OpenSettings(SettingsWindow.TabBinds)));
+        menu.Items.Add(binds);
+
         menu.Items.Add(Item("Nakładka dla OBS" + (ObsRunning ? $"  ({Obs.Url})" : ""), () => OpenSettings(SettingsWindow.TabObs), Cfg.ObsEnabled));
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Item(PendingUpdate != null ? $"Zaktualizuj do {PendingUpdate.Version}…" : "Sprawdź aktualizacje", () => CheckForUpdates(true)));
@@ -444,6 +463,7 @@ public partial class App : Application
         _stop.Cancel();
         Mic.Dispose();
         Obs.Dispose();
+        Binds?.Dispose();
         if (_hotkeySrc != null) { UnregisterHotKey(_hotkeySrc.Handle, HOTKEY_ID); _hotkeySrc.Dispose(); }
         _tray.Visible = false;
         _tray.Dispose();

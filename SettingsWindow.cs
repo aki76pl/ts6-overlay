@@ -14,7 +14,7 @@ namespace TS6Overlay;
 /// <summary>Okno ustawień: wszystkie opcje z podglądem nakładki na żywo. Zmiany zapisują się od razu.</summary>
 public sealed class SettingsWindow : Window
 {
-    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabPeople = 4, TabObs = 5, TabUpdates = 6;
+    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabUpdates = 7;
 
     readonly App _app;
     readonly Config _cfg;
@@ -50,6 +50,7 @@ public sealed class SettingsWindow : Window
         _tabs.Items.Add(Tab("Edytor motywów", EditorTab()));
         _tabs.Items.Add(Tab("Zachowanie", BehaviorTab()));
         _tabs.Items.Add(Tab("Powiadomienia", NotifyTab()));
+        _tabs.Items.Add(Tab("Bindy", BindsTab()));
         _tabs.Items.Add(Tab("Osoby", PeopleTab()));
         _tabs.Items.Add(Tab("OBS", ObsTab()));
         _tabs.Items.Add(Tab("Aktualizacje", UpdatesTab()));
@@ -60,6 +61,8 @@ public sealed class SettingsWindow : Window
             else ShowTheme(_edit);
             if (_tabs.SelectedIndex == TabPeople) RebuildPeople();
             if (_tabs.SelectedIndex != TabNotify) _app.MicTest = false;
+            if (_tabs.SelectedIndex == TabBinds) RebuildBinds();
+            else CancelCapture();
         };
 
         var previewBox = new Border
@@ -85,7 +88,8 @@ public sealed class SettingsWindow : Window
 
         _timer.Tick += (_, _) => TimerTick();
         _timer.Start();
-        Closed += (_, _) => _timer.Stop();
+        Closed += (_, _) => { _timer.Stop(); CancelCapture(); };
+        PreviewKeyDown += OnCaptureKey;
     }
 
     public void SelectTab(int i) => _tabs.SelectedIndex = i;
@@ -535,6 +539,192 @@ public sealed class SettingsWindow : Window
             if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files) Assign(files[0]);
         };
         return row;
+    }
+
+    // =====================================================================
+    // Bindy: klawisz → dźwięk
+    // =====================================================================
+
+    StackPanel _bindList = null!;
+    SoundBind? _capturing;
+    Button? _captureBtn;
+
+    UIElement BindsTab()
+    {
+        var p = Page();
+        p.Children.Add(Header("Bindy klawiszowe"));
+        p.Children.Add(Hint("Przypisz klawisz albo skrót (np. F9, Ctrl+1, Num 5) do dźwięku. Działa w grze i w każdym innym programie. " +
+                            "Ponowne naciśnięcie w trakcie odtwarzania zatrzymuje dźwięk. Plik możesz przeciągnąć na wiersz binda."));
+        p.Children.Add(Row(Btn("+ Dodaj bind", () =>
+        {
+            var b = new SoundBind { Name = $"Bind {_cfg.Binds.Count + 1}" };
+            _cfg.Binds.Add(b);
+            Changed();
+            RebuildBinds();
+        }, primary: true), Btn("■ Zatrzymaj odtwarzanie", () => _app.Binds.Stop())));
+        _bindList = new StackPanel();
+        p.Children.Add(_bindList);
+
+        p.Children.Add(Header("Gdzie grać dźwięki bindów"));
+        var dev = new ComboBox { MinWidth = 300 };
+        var devices = BindManager.OutputDevices();
+        dev.Items.Add("Domyślne urządzenie (słyszysz tylko Ty)");
+        foreach (var d in devices) dev.Items.Add(d.name);
+        dev.SelectedIndex = Math.Max(0, devices.FindIndex(d => d.name == _cfg.BindDeviceName) + 1);
+        dev.SelectionChanged += (_, _) =>
+        {
+            _cfg.BindDeviceName = dev.SelectedIndex <= 0 ? "" : devices[dev.SelectedIndex - 1].name;
+            Changed();
+        };
+        p.Children.Add(Row(Label("Urządzenie", 100), dev));
+        p.Children.Add(Check("Odtwarzaj też u mnie (gdy wybrano inne urządzenie)", () => _cfg.BindAlsoLocal, v => _cfg.BindAlsoLocal = v));
+        p.Children.Add(Hint("Żeby dźwięki słyszeli inni na TeamSpeaku, potrzebny jest wirtualny kabel audio, np. VB-Audio Virtual Cable. " +
+                            "Wybierz tu jego wejście (np. „CABLE Input”) i podaj je do TS razem z mikrofonem, np. przez VoiceMeeter. " +
+                            "Bez tego dźwięki słyszysz tylko Ty."));
+        RebuildBinds();
+        return Scroll(p);
+    }
+
+    void RebuildBinds()
+    {
+        if (_bindList == null) return;
+        _bindList.Children.Clear();
+        if (_cfg.Binds.Count == 0) _bindList.Children.Add(Hint("Nie masz jeszcze żadnych bindów — kliknij „+ Dodaj bind”."));
+        foreach (var b in _cfg.Binds.ToList()) _bindList.Children.Add(BindRow(b));
+    }
+
+    UIElement BindRow(SoundBind b)
+    {
+        var enabled = new CheckBox { IsChecked = b.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), ToolTip = "Włączony" };
+        enabled.Checked += (_, _) => { b.Enabled = true; Changed(); RebuildBinds(); };
+        enabled.Unchecked += (_, _) => { b.Enabled = false; Changed(); RebuildBinds(); };
+
+        var name = Input(170);
+        name.Text = b.Name;
+        name.LostFocus += (_, _) => { var n = name.Text.Trim(); if (n != "" && n != b.Name) { b.Name = n; Changed(); } };
+
+        var keyBtn = Btn(b.KeyText, () => { });
+        keyBtn.MinWidth = 120;
+        keyBtn.ToolTip = "Kliknij i naciśnij klawisz lub skrót";
+        keyBtn.Click += (_, _) => StartCapture(b, keyBtn);
+
+        var line1 = Row(enabled, name, keyBtn,
+            Btn("▶", () => _app.Binds.Trigger(b)),
+            Btn("Usuń", () =>
+            {
+                if (!Confirm($"Usunąć bind „{b.Name}”?")) return;
+                _cfg.Binds.Remove(b);
+                Sounds.TryDelete(b.SoundPath);
+                Changed();
+                RebuildBinds();
+            }));
+
+        var file = new TextBlock { MaxWidth = 230, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        bool hasFile = b.SoundPath != "" && System.IO.File.Exists(b.SoundPath);
+        file.Text = hasFile ? $"♪ {System.IO.Path.GetFileName(b.SoundPath)} ({Sounds.Length(b.SoundPath).TotalSeconds:0.#} s)" : "brak dźwięku";
+        file.Foreground = hasFile ? AccentB : Brushes.IndianRed;
+
+        void Assign(string source)
+        {
+            try
+            {
+                var (path, _) = Sounds.Import(source, "bind-" + b.Id);
+                b.SoundPath = path;
+                if (b.Name.StartsWith("Bind ")) b.Name = System.IO.Path.GetFileNameWithoutExtension(source);
+                Changed();
+                RebuildBinds();
+                _app.Binds.Trigger(b);
+            }
+            catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
+        }
+
+        var vol = new Slider { Minimum = 0, Maximum = 100, Value = b.Volume, Width = 110, VerticalAlignment = VerticalAlignment.Center, IsSnapToTickEnabled = true, TickFrequency = 5 };
+        var volText = Label($"{b.Volume}%", 44, dim: true);
+        vol.ValueChanged += (_, _) => { b.Volume = (int)vol.Value; volText.Text = $"{b.Volume}%"; _app.Cfg.Save(); };
+
+        var line2 = Row(
+            Btn("Wybierz dźwięk…", () =>
+            {
+                var d = new Microsoft.Win32.OpenFileDialog { Title = "Dźwięk binda: " + b.Name, Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a" };
+                if (d.ShowDialog(this) == true) Assign(d.FileName);
+            }),
+            file, Label("głośność", dim: true), vol, volText);
+        line2.Margin = new Thickness(26, 0, 0, 0);
+
+        var box = new StackPanel();
+        box.Children.Add(line1);
+        box.Children.Add(line2);
+        if (_app.Binds.Failed.Contains(b.Id))
+            box.Children.Add(new TextBlock
+            {
+                Text = $"Skrót {b.KeyText} jest zajęty przez inny program — wybierz inny.",
+                Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
+            });
+        else if (_cfg.Binds.Any(o => o != b && o.Enabled && b.Enabled && o.Key == b.Key && o.Modifiers == b.Modifiers && b.Key != 0))
+            box.Children.Add(new TextBlock
+            {
+                Text = $"Ten sam skrót ma inny bind.", Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
+            });
+
+        var card = Card_(box);
+        card.Margin = new Thickness(0, 4, 0, 4);
+        card.Opacity = b.Enabled ? 1 : 0.55;
+        card.AllowDrop = true;
+        card.DragOver += (_, e) => { e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; };
+        card.Drop += (_, e) => { if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } f) Assign(f[0]); };
+        return card;
+    }
+
+    void StartCapture(SoundBind b, Button btn)
+    {
+        CancelCapture();
+        _capturing = b;
+        _captureBtn = btn;
+        btn.Content = "Naciśnij skrót…  (Esc = anuluj, Backspace = usuń)";
+        btn.Background = AccentB;
+        btn.Foreground = Brushes.Black;
+        _app.BindCapture = true;
+        btn.Focus();
+    }
+
+    void CancelCapture()
+    {
+        if (_capturing == null) return;
+        _capturing = null;
+        _captureBtn = null;
+        _app.BindCapture = false;
+        RebuildBinds();
+    }
+
+    void OnCaptureKey(object sender, KeyEventArgs e)
+    {
+        if (_capturing == null) return;
+        e.Handled = true;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+            return;   // czekamy na właściwy klawisz
+        var b = _capturing;
+        if (key == Key.Escape) { CancelCapture(); return; }
+        if (key is Key.Back or Key.Delete)
+        {
+            b.Key = 0; b.Modifiers = 0;
+        }
+        else
+        {
+            uint mods = 0;
+            var m = Keyboard.Modifiers;
+            if (m.HasFlag(ModifierKeys.Alt)) mods |= 1;
+            if (m.HasFlag(ModifierKeys.Control)) mods |= 2;
+            if (m.HasFlag(ModifierKeys.Shift)) mods |= 4;
+            if (m.HasFlag(ModifierKeys.Windows)) mods |= 8;
+            b.Key = KeyInterop.VirtualKeyFromKey(key);
+            b.Modifiers = mods;
+        }
+        _capturing = null;
+        _captureBtn = null;
+        _app.BindCapture = false;   // rejestruje skróty od nowa (z nowym klawiszem)
+        _app.Cfg.Save();
+        RebuildBinds();
     }
 
     // =====================================================================
