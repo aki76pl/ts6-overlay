@@ -27,7 +27,10 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 | **Ulubieni i ignorowani** | ulubieni mają własny kolor nicku i dźwięk wejścia; ignorowani (np. boty muzyczne) znikają z nakładki |
 | **Motywy** | 8 wbudowanych motywów (domyślny Terminal) i edytor do tworzenia własnych; motywy wymieniasz ze znajomymi w plikach `.ts6theme` |
 | **OBS** | ta sama nakładka jako strona `http://localhost:5898/` dla źródła „Przeglądarka”; działa też w grach pełnoekranowych |
-| **Statystyki sesji** | kto ile mówił, ile razy wchodził, historia zdarzeń, eksport do CSV |
+| **Statystyki** | bieżąca sesja oraz historia dni, tygodni i miesięcy: kto ile był na serwerze i mówił, z wykresami; eksport do CSV |
+| **Archiwum czatu** | wiadomości i szturchnięcia zapisywane z datą, z wyszukiwarką |
+| **Panel na telefonie** | strona w sieci domowej (kod QR): lista osób, ostatnie wiadomości, przyciski bindów, „zatrzymaj wszystko” |
+| **Status w Discordzie** | „Na TeamSpeaku: Pluton 6 · 3 osób na kanale” z licznikiem czasu w Twoim profilu Discord |
 | **Lektor** | czyta powiadomienia na głos (wejścia, wiadomości, szturchnięcia, znajomi); słychać go także w grach z wyłącznym pełnym ekranem |
 | **Klawisze podglądu** | przytrzymaj klawisz: pełna lista osób na serwerze albo ostatnie 10 wiadomości; po puszczeniu wszystko wraca |
 | **Profile gier** | osobna pozycja, rozmiar, przezroczystość i motyw dla każdej gry; program przełącza je sam |
@@ -64,6 +67,14 @@ W **Ustawieniach → Powiadomienia** każde zdarzenie (wejście, wyjście, wiado
 W **Ustawieniach → Bindy** kliknij **+ Dodaj bind**, potem przycisk skrótu, i naciśnij klawisz albo kombinację (Esc anuluje, Backspace usuwa). Dźwięk wybierasz przyciskiem albo przeciągasz plik na wiersz binda. Ponowne naciśnięcie skrótu w trakcie odtwarzania zatrzymuje dźwięk. Możesz też ustawić osobny **klawisz „zatrzymaj wszystko”**, który ucina każdy grający dźwięk (bindy i powiadomienia). Bindy są też w menu ikony w zasobniku.
 
 Domyślnie dźwięki bindów słyszysz tylko Ty. Żeby słyszeli je inni na TeamSpeaku, zainstaluj wirtualny kabel audio (np. VB-Audio Virtual Cable), wybierz go w polu **Urządzenie** i podaj do TS razem z mikrofonem (np. przez VoiceMeeter).
+
+### Panel na telefonie
+
+W **Ustawieniach → Telefon i Discord** zaznacz „Włącz panel na telefonie” i zeskanuj kod QR aparatem telefonu (telefon musi być w tej samej sieci Wi-Fi). Windows zapyta o dostęp do sieci: zaznacz „Sieci prywatne” i kliknij „Zezwól”. Adres zawiera tajny klucz, więc nikt inny w sieci nie odpali Twoich dźwięków. W razie potrzeby wygenerujesz nowy klucz przyciskiem.
+
+### Status w Discordzie
+
+Discord wymaga identyfikatora aplikacji (Application ID). Utwórz go raz na [discord.com/developers/applications](https://discord.com/developers/applications): **New Application**, nazwa np. „TeamSpeak”, potem skopiuj **Application ID** do ustawień. Status działa, gdy na komputerze jest uruchomiona aplikacja Discord.
 
 ### OBS
 

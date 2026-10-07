@@ -130,6 +130,25 @@ public sealed class Config
     /// <summary>Gdy wybrano inne urządzenie — odtwarzaj też na domyślnym, żebyś słyszał.</summary>
     public bool BindAlsoLocal { get; set; } = true;
 
+    // --- panel na telefonie ---
+    public bool PhoneEnabled { get; set; } = false;
+    public int PhonePort { get; set; } = 5897;
+    /// <summary>Losowy klucz w adresie panelu — bez niego nikt w sieci nie odpali bindów.</summary>
+    public string PhoneKey { get; set; } = "";
+
+    // --- Discord ---
+    public bool DiscordEnabled { get; set; } = false;
+    /// <summary>Application ID z discord.com/developers/applications.</summary>
+    public string DiscordAppId { get; set; } = "";
+    public bool DiscordShowChannel { get; set; } = true;
+    public bool DiscordShowServer { get; set; } = false;
+    /// <summary>Nazwa obrazka (Rich Presence Assets) albo adres https; pusty = bez obrazka.</summary>
+    public string DiscordLargeImage { get; set; } = "";
+
+    // --- historia ---
+    public bool KeepChatArchive { get; set; } = true;
+    public bool KeepLongTermStats { get; set; } = true;
+
     // --- OBS ---
     public bool ObsEnabled { get; set; } = false;
     public int ObsPort { get; set; } = 5898;

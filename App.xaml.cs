@@ -17,6 +17,10 @@ public partial class App : Application
     public Updater.Release? PendingUpdate { get; private set; }
     public BindManager Binds { get; private set; } = null!;
     public Speech Voice { get; private set; } = null!;
+    public LongTermStats LongTerm { get; } = new();
+    public DiscordPresence Discord { get; private set; } = null!;
+    public PhoneServer Phone { get; private set; } = null!;
+    volatile string _phoneJson = "{}";
     /// <summary>Profil gry, który jest teraz zastosowany (null = ustawienia główne).</summary>
     public GameProfile? ActiveProfile { get; private set; }
 
@@ -101,6 +105,9 @@ public partial class App : Application
 
         Mic.VoiceChanged += v => Dispatcher.BeginInvoke(() => OnVoiceWhileMuted(v));
         Voice = new Speech(Cfg);
+        Discord = new DiscordPresence(Cfg);
+        if (Cfg.PhoneKey == "") { Cfg.PhoneKey = NewPhoneKey(); Cfg.Save(); }
+        Phone = new PhoneServer(() => _phoneJson, (cmd, arg) => Dispatcher.Invoke(() => OnPhoneCommand(cmd, arg)));
 
         Binds = new BindManager(Cfg);
         Binds.PeekPressed += StartPeek;
@@ -113,8 +120,19 @@ public partial class App : Application
 
         // Co sekundę: czy działa TeamSpeak, jaka gra jest na pierwszym planie (tryb „tylko w grach”, profile).
         var watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        watch.Tick += (_, _) => WatchTick();
+        watch.Tick += (_, _) => { WatchTick(); if (Phone.Running) _phoneJson = PhoneJson(); };
         watch.Start();
+
+        // Co minutę: czas obecności do statystyk długoterminowych; co 5 minut zapis na dysk.
+        int minutes = 0;
+        var minute = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        minute.Tick += (_, _) =>
+        {
+            if (Cfg.KeepLongTermStats && _state.Servers.Count > 0)
+                LongTerm.AddOnlineMinute(Ts.AllClients().Where(c => !Cfg.IsIgnored(c.Uid)), true);
+            if (++minutes % 5 == 0) LongTerm.Save();
+        };
+        minute.Start();
 
         if (args.Contains("--updated"))
             _tray.ShowBalloonTip(4000, "TS6 Overlay", T("Zaktualizowano do wersji {0}.", Updater.Current), Forms.ToolTipIcon.Info);
@@ -205,7 +223,61 @@ public partial class App : Application
         _state = Ts.Snapshot();
         _win.View.Render(_state);
         Obs.Update(_state, _win.View.Theme, Cfg);
+        Discord.Update(_state);
+        if (Phone.Running) _phoneJson = PhoneJson();
         UpdateMic();
+    }
+
+    // ---------- panel na telefonie ----------
+
+    static string NewPhoneKey() => Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
+
+    public void RegeneratePhoneKey()
+    {
+        Cfg.PhoneKey = NewPhoneKey();
+        ApplySettings();
+    }
+
+    /// <summary>Adres panelu do wpisania w telefonie / zakodowania w QR.</summary>
+    public string PhoneUrl(string? ip = null) =>
+        $"http://{ip ?? PhoneServer.LocalAddresses().FirstOrDefault() ?? "localhost"}:{Cfg.PhonePort}/?k={Cfg.PhoneKey}";
+
+    string PhoneJson()
+    {
+        object Member(ClientInfo m, int myId) => new
+        {
+            nick = m.Nickname, talking = m.Talking, whisper = m.Whisper, me = m.Id == myId,
+            muted = m.InputMuted, deaf = m.OutputMuted, fav = Cfg.FavoriteFor(m.Uid) != null,
+        };
+        var (_, tree) = Ts.ServerTree();
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            servers = _state.Servers.Select(v => new
+            {
+                server = v.Server, channel = v.Channel,
+                members = v.Members.Select(m => Member(m, v.MyId)),
+                watched = v.Watched.Select(w => new { name = w.Name, members = w.Members.Select(m => Member(m, 0)) }),
+            }),
+            binds = Cfg.Binds.Where(b => b.Enabled && b.SoundPath != "").Select(b => new { id = b.Id, name = b.Name, key = b.Key != 0 ? b.KeyText : "" }),
+            playing = Binds.PlayingId,
+            tree = tree.Select(c => new { name = c.Name, mine = c.Mine, members = c.Members.Select(m => Member(m, _state.MyId)) }),
+            messages = Stats.History.Where(h => h.Kind is NoticeKind.Message or NoticeKind.Poke).TakeLast(15).Reverse()
+                .Select(h => new { time = h.Time.ToString("HH:mm"), text = h.Text }),
+        });
+    }
+
+    void OnPhoneCommand(string cmd, string arg)
+    {
+        switch (cmd)
+        {
+            case "bind":
+                var b = Cfg.Binds.FirstOrDefault(x => x.Id == arg && x.Enabled);
+                if (b != null) Binds.Trigger(b);
+                break;
+            case "stop": Binds.StopAll(); break;
+            case "toggle": ToggleVisible(); break;
+        }
+        _phoneJson = PhoneJson();
     }
 
     void OnNotice(Notice n)
@@ -214,6 +286,8 @@ public partial class App : Application
         Obs.AddNotice(n);
         Obs.Update(_state, _win.View.Theme, Cfg);
         Stats.OnNotice(n);
+        if (Cfg.KeepChatArchive) ChatArchive.Append(n, _state.Active?.Server ?? "");
+        if (Phone.Running) _phoneJson = PhoneJson();
 
         var fav = n.Who != null ? Cfg.FavoriteFor(n.Who.Uid) : null;
         switch (n.Kind)
@@ -370,6 +444,9 @@ public partial class App : Application
         _win.View.ResetIdle();
         if (Cfg.ObsEnabled && (Obs.Port != Cfg.ObsPort || !ObsRunning)) ObsRunning = Obs.Start(Cfg.ObsPort);
         else if (!Cfg.ObsEnabled && ObsRunning) { Obs.Stop(); ObsRunning = false; }
+        if (Cfg.PhoneEnabled && (!Phone.Running || Phone.Port != Cfg.PhonePort || Phone.Key != Cfg.PhoneKey)) Phone.Start(Cfg.PhonePort, Cfg.PhoneKey);
+        else if (!Cfg.PhoneEnabled && Phone.Running) Phone.Stop();
+        Stats.LongTerm = Cfg.KeepLongTermStats ? LongTerm : null;
         if (!Cfg.GameOnly) _gameActive = false;
         WatchTick();
         UpdateVisibility();
@@ -420,7 +497,7 @@ public partial class App : Application
     {
         if (_statsWin == null)
         {
-            _statsWin = new StatsWindow(Stats);
+            _statsWin = new StatsWindow(Stats, LongTerm);
             _statsWin.Closed += (_, _) => _statsWin = null;
             _statsWin.Show();
         }
@@ -579,6 +656,9 @@ public partial class App : Application
         Obs.Dispose();
         Binds?.Dispose();
         Voice?.Dispose();
+        Discord?.Dispose();
+        Phone?.Dispose();
+        LongTerm.Save();
         if (_hotkeySrc != null) { UnregisterHotKey(_hotkeySrc.Handle, HOTKEY_ID); _hotkeySrc.Dispose(); }
         _tray.Visible = false;
         _tray.Dispose();

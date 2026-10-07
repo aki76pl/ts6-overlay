@@ -72,6 +72,8 @@ public sealed class BindManager : IDisposable
     readonly Dictionary<int, SoundBind> _registered = new();
     readonly List<WaveOutEvent> _playing = new();
     string? _playingId;
+    /// <summary>Id binda, który właśnie gra (null = cisza) — dla panelu na telefonie.</summary>
+    public string? PlayingId => _playing.Any(o => o.PlaybackState != PlaybackState.Stopped) ? _playingId : null;
 
     /// <summary>Bindy, których nie udało się zarejestrować (skrót zajęty przez inny program).</summary>
     public HashSet<string> Failed { get; } = new();

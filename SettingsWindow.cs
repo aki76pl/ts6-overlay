@@ -15,7 +15,7 @@ namespace TS6Overlay;
 /// <summary>Okno ustawień: wszystkie opcje z podglądem nakładki na żywo. Zmiany zapisują się od razu.</summary>
 public sealed class SettingsWindow : Window
 {
-    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabUpdates = 7;
+    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabPhone = 7, TabUpdates = 8;
 
     readonly App _app;
     readonly Config _cfg;
@@ -54,6 +54,7 @@ public sealed class SettingsWindow : Window
         _tabs.Items.Add(Tab("Bindy", BindsTab()));
         _tabs.Items.Add(Tab("Osoby", PeopleTab()));
         _tabs.Items.Add(Tab("OBS", ObsTab()));
+        _tabs.Items.Add(Tab("Telefon i Discord", PhoneTab()));
         _tabs.Items.Add(Tab("Aktualizacje i kopia", UpdatesTab()));
         _tabs.SelectionChanged += (_, e) =>
         {
@@ -446,6 +447,11 @@ public sealed class SettingsWindow : Window
             }),
             Btn("Odśwież listę programów", () => profProc.ItemsSource = GameDetector.WindowedProcesses())));
         RebuildProfiles();
+
+        p.Children.Add(Header("Historia"));
+        p.Children.Add(Check("Zapisuj statystyki długoterminowe (kto ile był na serwerze i mówił)", () => _cfg.KeepLongTermStats, v => _cfg.KeepLongTermStats = v));
+        p.Children.Add(Check("Zapisuj archiwum czatu (wiadomości i szturchnięcia)", () => _cfg.KeepChatArchive, v => _cfg.KeepChatArchive = v));
+        p.Children.Add(Hint("Wykresy i wyszukiwarkę znajdziesz w oknie statystyk (ikona w zasobniku → Statystyki…). Dane zostają tylko na tym komputerze."));
 
         p.Children.Add(Header("Diagnostyka"));
         p.Children.Add(Check("Zapisuj surowe zdarzenia TeamSpeak (events.log)", () => _cfg.LogRawEvents, v => _cfg.LogRawEvents = v));
@@ -1053,6 +1059,109 @@ public sealed class SettingsWindow : Window
     }
 
     // =====================================================================
+    // Telefon i Discord
+    // =====================================================================
+
+    StackPanel _phoneInfo = null!;
+    TextBlock _phoneStatus = null!, _discordStatus = null!;
+
+    UIElement PhoneTab()
+    {
+        var p = Page();
+        p.Children.Add(Header("Panel na telefonie"));
+        p.Children.Add(Hint("Strona w Twojej sieci domowej: lista osób na kanale i serwerze, ostatnie wiadomości, przyciski bindów i „zatrzymaj wszystko”. " +
+                            "Telefon musi być w tej samej sieci Wi-Fi co komputer."));
+        p.Children.Add(Check("Włącz panel na telefonie", () => _cfg.PhoneEnabled, v => { _cfg.PhoneEnabled = v; Dispatcher.BeginInvoke(RebuildPhone); }));
+        var port = Input(80);
+        port.Text = _cfg.PhonePort.ToString();
+        p.Children.Add(Row(Label("Port", 60), port, Btn("Zastosuj port", () =>
+        {
+            if (int.TryParse(port.Text, out var v) && v is > 1024 and < 65536 && v != _cfg.ObsPort) { _cfg.PhonePort = v; Changed(); RebuildPhone(); }
+            else Info(T("Port musi być liczbą od 1025 do 65535 i inny niż port OBS."));
+        })));
+        _phoneInfo = new StackPanel();
+        p.Children.Add(_phoneInfo);
+        _phoneStatus = Hint("");
+        p.Children.Add(_phoneStatus);
+        p.Children.Add(Hint("Przy pierwszym włączeniu Windows zapyta o dostęp do sieci — zaznacz „Sieci prywatne” i kliknij „Zezwól”. " +
+                            "Adres zawiera tajny klucz: bez niego nikt w sieci nie odpali Twoich dźwięków. Jeśli ktoś go poznał, kliknij „Nowy klucz”."));
+        RebuildPhone();
+
+        p.Children.Add(Header("Status w Discordzie"));
+        p.Children.Add(Hint("Twój profil Discord pokaże np. „Na TeamSpeaku: Pluton 6 · 3 osób na kanale” z licznikiem czasu. Wymaga uruchomionej aplikacji Discord na tym komputerze."));
+        p.Children.Add(Check("Pokazuj status w Discordzie", () => _cfg.DiscordEnabled, v => _cfg.DiscordEnabled = v));
+        var appId = Input(220);
+        appId.Text = _cfg.DiscordAppId;
+        p.Children.Add(Row(Label("Application ID", 120), appId, Btn("Zastosuj", () =>
+        {
+            var id = appId.Text.Trim();
+            if (id != "" && !id.All(char.IsDigit)) { Info(T("Application ID to sam ciąg cyfr, np. 1234567890123456789.")); return; }
+            _cfg.DiscordAppId = id;
+            Changed();
+        }), Btn("Otwórz portal Discord", () => Process.Start(new ProcessStartInfo("https://discord.com/developers/applications") { UseShellExecute = true }))));
+        p.Children.Add(Hint("Jak zdobyć Application ID (jednorazowo, ok. 1 minuty):\n" +
+                            "1. Otwórz portal Discord i zaloguj się.\n" +
+                            "2. Kliknij „New Application” i nadaj nazwę, np. „TeamSpeak” — Discord pokaże ją jako „Gra w TeamSpeak”.\n" +
+                            "3. Skopiuj „Application ID” z zakładki „General Information”, wklej powyżej i kliknij „Zastosuj”."));
+        p.Children.Add(Check("Pokazuj nazwę kanału", () => _cfg.DiscordShowChannel, v => _cfg.DiscordShowChannel = v));
+        p.Children.Add(Check("Pokazuj nazwę serwera", () => _cfg.DiscordShowServer, v => _cfg.DiscordShowServer = v));
+        var img = Input(220);
+        img.Text = _cfg.DiscordLargeImage;
+        p.Children.Add(Row(Label("Obrazek (opcjonalnie)", 160), img, Btn("Zastosuj", () => { _cfg.DiscordLargeImage = img.Text.Trim(); Changed(); })));
+        p.Children.Add(Hint("Nazwa obrazka dodanego w portalu (Rich Presence → Art Assets) albo adres https do obrazka."));
+        _discordStatus = Hint("");
+        p.Children.Add(_discordStatus);
+        return Scroll(p);
+    }
+
+    void RebuildPhone()
+    {
+        if (_phoneInfo == null) return;
+        _phoneInfo.Children.Clear();
+        if (!_cfg.PhoneEnabled) return;
+        var ips = PhoneServer.LocalAddresses();
+        if (ips.Count == 0) { _phoneInfo.Children.Add(Hint(T("Nie znaleziono połączenia z siecią lokalną."))); return; }
+        var url = _app.PhoneUrl(ips[0]);
+        var qr = new System.Windows.Controls.Image { Width = 220, Height = 220, Margin = new Thickness(0, 6, 16, 6), Source = Qr(url) };
+        RenderOptions.SetBitmapScalingMode(qr, BitmapScalingMode.NearestNeighbor);
+        var right = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        right.Children.Add(Label("Zeskanuj kod aparatem telefonu albo wpisz adres:"));
+        var box = Input(380);
+        box.Text = url;
+        box.IsReadOnly = true;
+        right.Children.Add(Row(box));
+        right.Children.Add(Row(
+            Btn("Kopiuj", () => { try { Clipboard.SetText(url); } catch { } }),
+            Btn("Otwórz tutaj", () => Process.Start(new ProcessStartInfo(_app.PhoneUrl("localhost")) { UseShellExecute = true })),
+            Btn("Nowy klucz", () =>
+            {
+                if (!Confirm(T("Wygenerować nowy klucz? Stary adres przestanie działać — trzeba będzie zeskanować kod jeszcze raz."))) return;
+                _app.RegeneratePhoneKey();
+                RebuildPhone();
+            })));
+        if (ips.Count > 1) right.Children.Add(Hint(T("Inne adresy tego komputera: {0}", string.Join(", ", ips.Skip(1)))));
+        right.Children.Add(Hint("Wskazówka: w przeglądarce telefonu wybierz „Dodaj do ekranu głównego” — panel otworzy się jak aplikacja."));
+        var row = new WrapPanel();
+        row.Children.Add(new Border { Background = Brushes.White, Padding = new Thickness(6), Child = qr, Margin = new Thickness(0, 6, 16, 6) });
+        row.Children.Add(right);
+        _phoneInfo.Children.Add(row);
+    }
+
+    static System.Windows.Media.Imaging.BitmapImage Qr(string text)
+    {
+        using var gen = new QRCoder.QRCodeGenerator();
+        using var data = gen.CreateQrCode(text, QRCoder.QRCodeGenerator.ECCLevel.M);
+        var png = new QRCoder.PngByteQRCode(data).GetGraphic(8);
+        var bmp = new System.Windows.Media.Imaging.BitmapImage();
+        bmp.BeginInit();
+        bmp.StreamSource = new System.IO.MemoryStream(png);
+        bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        bmp.EndInit();
+        bmp.Freeze();
+        return bmp;
+    }
+
+    // =====================================================================
     // Aktualizacje i instalacja
     // =====================================================================
 
@@ -1137,6 +1246,10 @@ public sealed class SettingsWindow : Window
 
     void TimerTick()
     {
+        if (_phoneStatus != null)
+            _phoneStatus.Text = !_cfg.PhoneEnabled ? "" : _app.Phone.Running ? T("Panel działa.") : T("Nie udało się uruchomić: {0} Spróbuj innego portu.", _app.Phone.Error ?? "");
+        if (_discordStatus != null)
+            _discordStatus.Text = !_cfg.DiscordEnabled ? T("Wyłączone.") : _cfg.DiscordAppId == "" ? T("Podaj Application ID.") : _app.Discord.Status;
         if (_micLevel != null)
         {
             _micLevel.Value = Math.Min(100, _app.Mic.Level * 100);

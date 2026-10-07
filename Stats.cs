@@ -22,6 +22,8 @@ public sealed class Stats
     public readonly List<(DateTime Time, string Text, NoticeKind Kind)> History = new();
     public DateTime Started { get; private set; } = DateTime.Now;
     public event Action? Changed;
+    /// <summary>Statystyki długoterminowe (null = wyłączone).</summary>
+    public LongTermStats? LongTerm;
 
     static string KeyOf(ClientInfo c) => c.Uid != "" ? c.Uid : "#" + c.Id;
 
@@ -40,6 +42,7 @@ public sealed class Stats
         else if (p.TalkingSince is { } s)
         {
             p.TalkTime += DateTime.Now - s;
+            LongTerm?.AddTalk(c.Uid, p.Nickname, (DateTime.Now - s).TotalSeconds);
             p.TalkingSince = null;
         }
         Changed?.Invoke();
@@ -52,8 +55,8 @@ public sealed class Stats
         if (n.Who != null)
         {
             var p = Get(n.Who);
-            if (n.Kind == NoticeKind.Join) p.Joins++;
-            if (n.Kind == NoticeKind.Message) p.Messages++;
+            if (n.Kind == NoticeKind.Join) { p.Joins++; LongTerm?.AddJoin(n.Who.Uid, p.Nickname); }
+            if (n.Kind == NoticeKind.Message) { p.Messages++; LongTerm?.AddMessage(n.Who.Uid, p.Nickname); }
         }
         Changed?.Invoke();
     }
