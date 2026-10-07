@@ -433,5 +433,10 @@ public static class Translations
         ["Brak połączenia z OpenRGB: {0}"] = "No connection to OpenRGB: {0}",
         ["OpenRGB nie odpowiada."] = "OpenRGB isn't responding.",
         ["Zbyt stara wersja OpenRGB — zainstaluj 0.8 lub nowszą."] = "OpenRGB is too old — install 0.8 or newer.",
+        ["Gra działa w trybie pełnoekranowym, więc nakładki nie widać. Przełącz grę na okno bez ramek."] = "The game runs in fullscreen mode, so the overlay isn't visible. Switch the game to borderless window.",
+        ["Nakładka niewidoczna w grze {0}"] = "Overlay not visible in {0}",
+        ["Gra działa w trybie wyłącznego pełnego ekranu — żadne okno nie może się wtedy nad nią wyświetlić. W ustawieniach grafiki gry wybierz „Okno bez ramek” (Borderless / Windowed Fullscreen). Bez tego działają: lektor, błyski RGB, panel na telefonie i nakładka OBS."] = "The game runs in exclusive fullscreen — no window can be shown over it. In the game's graphics settings choose “Borderless” (Windowed Fullscreen). Without it you still have: narrator, RGB flashes, the phone panel and the OBS overlay.",
+        ["Podpowiadaj, gdy gra działa w trybie wyłącznego pełnego ekranu (nakładki wtedy nie widać)"] = "Show a hint when a game runs in exclusive fullscreen (the overlay isn't visible then)",
+        ["Jeśli Windows pokaże znajomemu okno „System Windows ochronił ten komputer”, niech kliknie „Więcej informacji”, a potem „Uruchom mimo to”. To ostrzeżenie dotyczy programów bez płatnego certyfikatu podpisu i pojawia się tylko przy pierwszym uruchomieniu."] = "If Windows shows a friend the “Windows protected your PC” window, they should click “More info” and then “Run anyway”. This warning applies to programs without a paid code-signing certificate and appears only on the first run.",
     };
 }

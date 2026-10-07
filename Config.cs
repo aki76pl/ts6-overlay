@@ -87,6 +87,8 @@ public sealed class Config
     public List<string> Games { get; set; } = new();
     /// <summary>Traktuj każdą aplikację na pełnym ekranie (poza przeglądarkami) jak grę.</summary>
     public bool GameFullscreenAny { get; set; } = true;
+    /// <summary>Podpowiedź, gdy gra działa w wyłącznym pełnym ekranie (nakładka niewidoczna).</summary>
+    public bool FullscreenHint { get; set; } = true;
 
     // --- lektor (czytanie na głos) ---
     public bool TtsEnabled { get; set; } = false;

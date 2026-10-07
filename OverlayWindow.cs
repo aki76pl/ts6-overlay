@@ -101,6 +101,21 @@ public sealed class OverlayWindow : Window
     [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
 
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    static readonly IntPtr HWND_TOPMOST = new(-1);
+    const uint SWP_NOSIZE = 0x1, SWP_NOMOVE = 0x2, SWP_NOACTIVATE = 0x10, SWP_NOOWNERZORDER = 0x200;
+
+    /// <summary>
+    /// Gry (zwłaszcza w trybie okna bez ramek lub z optymalizacjami pełnego ekranu Windows) potrafią wejść nad
+    /// okna „zawsze na wierzchu”. Ponowne ustawienie TOPMOST co chwilę przywraca nakładkę nad grą.
+    /// </summary>
+    public void KeepOnTop()
+    {
+        if (!IsVisible) return;
+        var h = new WindowInteropHelper(this).Handle;
+        if (h != IntPtr.Zero) SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+    }
+
     void ApplyClickThrough()
     {
         var h = new WindowInteropHelper(this).Handle;

@@ -381,6 +381,8 @@ public partial class App : Application
     void WatchTick()
     {
         bool changed = false;
+        _win.KeepOnTop();
+        CheckExclusiveFullscreen();
         bool running = IsTeamSpeakRunning();
         if (running != _tsRunning) { _tsRunning = running; changed = true; }
 
@@ -397,6 +399,33 @@ public partial class App : Application
         else if (Cfg.Profiles.Count == 0 && ActiveProfile != null) ApplyProfile(null);
 
         if (changed) UpdateVisibility();
+    }
+
+    readonly HashSet<string> _fullscreenWarned = new(StringComparer.OrdinalIgnoreCase);
+    string? _pendingFullscreenHint;
+
+    /// <summary>Gra w wyłącznym pełnym ekranie: nakładki nie da się pokazać — powiedz o tym raz na grę i sesję.</summary>
+    void CheckExclusiveFullscreen()
+    {
+        if (!Cfg.FullscreenHint || !_tsRunning) return;
+        bool exclusive = GameDetector.IsExclusiveFullscreen();
+        if (exclusive)
+        {
+            var game = GameDetector.ForegroundProcess();
+            if (game == "" || !_fullscreenWarned.Add(game)) return;
+            _pendingFullscreenHint = game;
+            // Dymek nie pojawi się nad grą — lektor (jeśli włączony) powie od razu, dymek pokażemy po wyjściu z gry.
+            if (Cfg.TtsEnabled) Voice.Say(T("Gra działa w trybie pełnoekranowym, więc nakładki nie widać. Przełącz grę na okno bez ramek."));
+        }
+        else if (_pendingFullscreenHint != null)
+        {
+            var game = _pendingFullscreenHint;
+            _pendingFullscreenHint = null;
+            _tray.ShowBalloonTip(15000, T("Nakładka niewidoczna w grze {0}", game),
+                T("Gra działa w trybie wyłącznego pełnego ekranu — żadne okno nie może się wtedy nad nią wyświetlić. " +
+                  "W ustawieniach grafiki gry wybierz „Okno bez ramek” (Borderless / Windowed Fullscreen). " +
+                  "Bez tego działają: lektor, błyski RGB, panel na telefonie i nakładka OBS."), Forms.ToolTipIcon.Info);
+        }
     }
 
     void ApplyProfile(GameProfile? p)

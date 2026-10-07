@@ -75,6 +75,18 @@ public static class GameDetector
         return r.Left <= m.Left && r.Top <= m.Top && r.Right >= m.Right && r.Bottom >= m.Bottom;
     }
 
+    /// <summary>
+    /// true = na pierwszym planie działa aplikacja Direct3D w trybie wyłącznego pełnego ekranu —
+    /// wtedy żadne okno (także nakładka) nie może wyświetlić się nad grą.
+    /// </summary>
+    public static bool IsExclusiveFullscreen()
+    {
+        try { return SHQueryUserNotificationState(out int state) == 0 && state == 3; /* QUNS_RUNNING_D3D_FULL_SCREEN */ }
+        catch { return false; }
+    }
+
+    [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int state);
+
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public uint dwFlags; }
 

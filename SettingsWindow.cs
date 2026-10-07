@@ -406,6 +406,7 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Header("Pokazuj tylko w grach"));
         p.Children.Add(Check("Pokazuj nakładkę tylko, gdy gra jest na pierwszym planie", () => _cfg.GameOnly, v => _cfg.GameOnly = v));
         p.Children.Add(Check("Każda aplikacja na pełnym ekranie to gra (bez przeglądarek i odtwarzaczy wideo)", () => _cfg.GameFullscreenAny, v => _cfg.GameFullscreenAny = v));
+        p.Children.Add(Check("Podpowiadaj, gdy gra działa w trybie wyłącznego pełnego ekranu (nakładki wtedy nie widać)", () => _cfg.FullscreenHint, v => _cfg.FullscreenHint = v));
         p.Children.Add(Label("Lista gier (nazwa pliku .exe):"));
         _gamesList = new ListBox { Height = 120, Background = InputBg, Foreground = Fg, BorderBrush = Line, Margin = new Thickness(0, 4, 0, 4) };
         RefreshGames();
@@ -1269,6 +1270,8 @@ public sealed class SettingsWindow : Window
             })));
         p.Children.Add(Hint("Znajomym wyślij link do strony wydań albo sam plik TS6Overlay.exe. Przy pierwszym uruchomieniu program zaproponuje instalację, " +
                             "a potem sam będzie się aktualizował."));
+        p.Children.Add(Hint("Jeśli Windows pokaże znajomemu okno „System Windows ochronił ten komputer”, niech kliknie „Więcej informacji”, a potem „Uruchom mimo to”. " +
+                            "To ostrzeżenie dotyczy programów bez płatnego certyfikatu podpisu i pojawia się tylko przy pierwszym uruchomieniu."));
         UpdateInstallStatus();
         return Scroll(p);
     }

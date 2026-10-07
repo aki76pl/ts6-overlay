@@ -7,10 +7,23 @@ Nakładka na grę dla **TeamSpeak 6**: pokazuje, kto jest na Twoim kanale i kto 
 ## Instalacja
 
 1. Pobierz `TS6Overlay.exe` ze strony [Releases](https://github.com/aki76pl/ts6-overlay/releases/latest).
-2. Uruchom plik i kliknij **Tak**, gdy program zaproponuje instalację. Instalacja nie wymaga uprawnień administratora. Program trafia do `%LOCALAPPDATA%\Programs\TS6Overlay`, dostaje skrót w menu Start i uruchamia się razem z Windows.
+2. Uruchom plik. Jeśli Windows pokaże niebieskie okno „System Windows ochronił ten komputer”, zobacz [Ostrzeżenie SmartScreen](#ostrzeżenie-windows-smartscreen) poniżej. Kliknij **Tak**, gdy program zaproponuje instalację. Instalacja nie wymaga uprawnień administratora. Program trafia do `%LOCALAPPDATA%\Programs\TS6Overlay`, dostaje skrót w menu Start i uruchamia się razem z Windows.
 3. W TeamSpeaku kliknij **Zezwól**, gdy pojawi się prośba o dostęp dla „TS6 Overlay”. Jeśli prośba się nie pojawi, sprawdź w TS **Ustawienia → Remote Apps**, czy API jest włączone.
 
 Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstalujesz go w **Ustawieniach Windows → Aplikacje**.
+
+### Ostrzeżenie Windows SmartScreen
+
+Przy pierwszym uruchomieniu Windows może pokazać niebieskie okno **„System Windows ochronił ten komputer”**. Pojawia się ono przy programach, które nie mają płatnego certyfikatu podpisu cyfrowego i które pobrało jeszcze niewiele osób. Nie znaczy, że plik jest groźny.
+
+1. Kliknij **Więcej informacji** (link pod tekstem).
+2. Pojawi się przycisk **Uruchom mimo to**. Kliknij go.
+
+Windows zapyta o to tylko przy pierwszym uruchomieniu. Później, także po automatycznych aktualizacjach, program uruchamia się normalnie.
+
+Plik pobieraj wyłącznie ze strony [Releases](https://github.com/aki76pl/ts6-overlay/releases/latest) tego repozytorium. Kod źródłowy jest jawny, więc każdy może sprawdzić, co program robi.
+
+Jeśli przeglądarka (np. Edge lub Chrome) oznaczy plik jako „rzadko pobierany”, wybierz **Zachowaj** (w Edge: menu **⋯** przy pobranym pliku → **Zachowaj** → **Pokaż więcej** → **Zachowaj mimo to**).
 
 ## Funkcje
 
@@ -89,9 +102,24 @@ W ustawieniach w zakładce **OBS** włącz stronę, a potem w OBS dodaj źródł
 - `?scale=1.5`: powiększenie,
 - `?notices=0`: bez powiadomień.
 
+## Nakładka niewidoczna w grze pełnoekranowej
+
+Gdy gra działa w trybie **wyłącznego pełnego ekranu** (Fullscreen / Exclusive Fullscreen), przejmuje cały obraz i żadne zwykłe okno nie może się nad nią wyświetlić. Dotyczy to każdej nakładki, która nie wstrzykuje się do gry. Discord i Steam robią to przez wstrzykiwanie kodu do gry, a to może zostać wykryte przez antycheat, dlatego TS6 Overlay tego nie robi.
+
+**Rozwiązanie:** w ustawieniach grafiki gry zmień tryb wyświetlania na **Okno bez ramek** (Borderless, Windowed Fullscreen, „Pełny ekran w oknie”). Gra nadal wypełnia cały ekran, a nakładka jest widoczna. W Windows 11 włącz też **Ustawienia → System → Ekran → Grafika → Optymalizacje dla gier w oknie**, żeby tryb okna bez ramek działał równie płynnie jak pełny ekran.
+
+TS6 Overlay sam wykrywa, kiedy gra działa w wyłącznym pełnym ekranie, i podpowiada, co zrobić: lektorem od razu, a dymkiem po wyjściu z gry. Podpowiedź wyłączysz w **Ustawieniach → Zachowanie**.
+
+Jeśli gra musi zostać w pełnym ekranie, nadal działają:
+
+- **lektor**: czyta na głos wejścia, wiadomości i szturchnięcia,
+- **błyski RGB** klawiatury i myszy,
+- **panel na telefonie**: lista osób i wiadomości na drugim ekranie,
+- **nakładka OBS** (dla widzów streamu).
+
 ## Ograniczenia
 
-- Okienko nakładki na ekranie widać, gdy gra działa w trybie **okno bez ramek** (Borderless). W wyłącznym pełnym ekranie gra je zasłania. Wtedy zostaje nakładka w OBS.
+- **Gry w trybie pełnoekranowym**: patrz [wyżej](#nakładka-niewidoczna-w-grze-pełnoekranowej).
 - Program korzysta z lokalnego API TeamSpeaka (Remote Apps, `ws://127.0.0.1:5899`). Może czytać, co się dzieje, ale nie może np. przenosić ani wyciszać innych osób.
 - Wykrywanie mowy przy wyciszonym mikrofonie nasłuchuje domyślnego mikrofonu **tylko wtedy, gdy jest on wyciszony w TS**. Program bada jedynie poziom głośności i nigdzie nie zapisuje dźwięku.
 
