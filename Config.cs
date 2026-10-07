@@ -145,6 +145,24 @@ public sealed class Config
     /// <summary>Nazwa obrazka (Rich Presence Assets) albo adres https; pusty = bez obrazka.</summary>
     public string DiscordLargeImage { get; set; } = "";
 
+    // --- podświetlenie RGB (OpenRGB) ---
+    public bool RgbEnabled { get; set; } = false;
+    public string RgbHost { get; set; } = "127.0.0.1";
+    public int RgbPort { get; set; } = 6742;
+    /// <summary>Kolor błysku dla zdarzenia (NoticeKind albo "MuteWarning"); pusty = bez błysku.</summary>
+    public Dictionary<string, string> RgbColors { get; set; } = new()
+    {
+        ["Poke"] = "#FFFF8C00",
+        ["Friend"] = "#FF00FF66",
+        ["Join"] = "",
+        ["Message"] = "",
+        ["MuteWarning"] = "",
+    };
+    public int RgbFlashes { get; set; } = 3;
+    public int RgbFlashMs { get; set; } = 180;
+
+    public string RgbColorFor(string kind) => RgbEnabled && RgbColors.TryGetValue(kind, out var c) ? c : "";
+
     // --- historia ---
     public bool KeepChatArchive { get; set; } = true;
     public bool KeepLongTermStats { get; set; } = true;

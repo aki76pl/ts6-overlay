@@ -54,7 +54,7 @@ public sealed class SettingsWindow : Window
         _tabs.Items.Add(Tab("Bindy", BindsTab()));
         _tabs.Items.Add(Tab("Osoby", PeopleTab()));
         _tabs.Items.Add(Tab("OBS", ObsTab()));
-        _tabs.Items.Add(Tab("Telefon i Discord", PhoneTab()));
+        _tabs.Items.Add(Tab("Integracje", PhoneTab()));
         _tabs.Items.Add(Tab("Aktualizacje i kopia", UpdatesTab()));
         _tabs.SelectionChanged += (_, e) =>
         {
@@ -1111,7 +1111,60 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Hint("Nazwa obrazka dodanego w portalu (Rich Presence → Art Assets) albo adres https do obrazka."));
         _discordStatus = Hint("");
         p.Children.Add(_discordStatus);
+
+        p.Children.Add(Header("Podświetlenie klawiatury i myszy (RGB)"));
+        p.Children.Add(Hint("Błysk kolorem przy wybranych zdarzeniach — działa przez darmowy program OpenRGB, który obsługuje sprzęt wielu marek naraz. " +
+                            "Po błysku podświetlenie wraca do Twoich ustawień."));
+        p.Children.Add(Check("Włącz błyski RGB", () => _cfg.RgbEnabled, v => { _cfg.RgbEnabled = v; if (v) _ = ProbeRgb(); }));
+        foreach (var (kind, label) in new[] { ("Poke", "Szturchnięcie"), ("Friend", "Znajomy jest online"), ("Join", "Ktoś wchodzi na kanał"),
+                                              ("Message", "Wiadomość"), ("MuteWarning", "Mówisz do wyciszonego mikrofonu") })
+            p.Children.Add(RgbRow(kind, label));
+        p.Children.Add(SliderRow("Liczba błysków", 1, 6, () => _cfg.RgbFlashes, v => _cfg.RgbFlashes = (int)v, v => $"{v:0}"));
+        p.Children.Add(SliderRow("Długość błysku", 80, 500, () => _cfg.RgbFlashMs, v => _cfg.RgbFlashMs = (int)v, v => $"{v:0} ms"));
+        _rgbStatus = Hint("");
+        p.Children.Add(Row(Btn("Sprawdź połączenie z OpenRGB", () => _ = ProbeRgb()),
+            Btn("Pobierz OpenRGB", () => Process.Start(new ProcessStartInfo("https://openrgb.org") { UseShellExecute = true }))));
+        p.Children.Add(_rgbStatus);
+        p.Children.Add(Hint("W OpenRGB otwórz kartę „SDK Server” i kliknij „Start Server” (oraz w ustawieniach OpenRGB włącz uruchamianie serwera przy starcie). " +
+                            "Błyskają tylko urządzenia widoczne w OpenRGB."));
+        if (_cfg.RgbEnabled) _ = ProbeRgb();
         return Scroll(p);
+    }
+
+    TextBlock? _rgbStatus;
+
+    async Task ProbeRgb()
+    {
+        if (_rgbStatus == null) return;
+        _rgbStatus.Text = T("Sprawdzam…");
+        bool ok = await _app.Lights.Probe();
+        _rgbStatus.Text = _app.Lights.Status + (ok ? "\n" + T("Urządzenia: {0}", string.Join(", ", _app.Lights.Devices.Select(d => $"{d.Name} ({d.Leds})"))) : "");
+    }
+
+    UIElement RgbRow(string kind, string label)
+    {
+        _cfg.RgbColors.TryGetValue(kind, out var current);
+        current ??= "";
+        var on = new CheckBox { Content = T(label), IsChecked = current != "", Foreground = Fg, Width = 270, VerticalAlignment = VerticalAlignment.Center };
+        string last = current != "" ? current : kind switch { "Poke" => "#FFFF8C00", "Friend" => "#FF00FF66", "MuteWarning" => "#FFFF0000", "Join" => "#FF00A0FF", _ => "#FFFFFFFF" };
+        var swatch = new Button { Width = 34, Height = 24, Margin = new Thickness(0, 0, 8, 0), Background = Theme.B(last), BorderBrush = Line, Style = null };
+        void Save() { _cfg.RgbColors[kind] = on.IsChecked == true ? last : ""; Changed(); }
+        on.Checked += (_, _) => Save();
+        on.Unchecked += (_, _) => Save();
+        swatch.Click += (_, _) =>
+        {
+            var c = Theme.C(last);
+            using var dlg = new Forms.ColorDialog { FullOpen = true, Color = System.Drawing.Color.FromArgb(c.R, c.G, c.B) };
+            if (dlg.ShowDialog() != Forms.DialogResult.OK) return;
+            last = $"#FF{dlg.Color.R:X2}{dlg.Color.G:X2}{dlg.Color.B:X2}";
+            swatch.Background = Theme.B(last);
+            if (on.IsChecked == true) Save();
+        };
+        return Row(on, swatch, Btn("▶ Test", () =>
+        {
+            if (!_cfg.RgbEnabled) { Info(T("Najpierw zaznacz „Włącz błyski RGB”.")); return; }
+            _app.Lights.Flash(last);
+        }));
     }
 
     void RebuildPhone()

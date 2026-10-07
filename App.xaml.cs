@@ -20,6 +20,7 @@ public partial class App : Application
     public LongTermStats LongTerm { get; } = new();
     public DiscordPresence Discord { get; private set; } = null!;
     public PhoneServer Phone { get; private set; } = null!;
+    public Rgb Lights { get; private set; } = null!;
     volatile string _phoneJson = "{}";
     /// <summary>Profil gry, który jest teraz zastosowany (null = ustawienia główne).</summary>
     public GameProfile? ActiveProfile { get; private set; }
@@ -33,7 +34,7 @@ public partial class App : Application
     StatsWindow? _statsWin;
     OverlayState _state = OverlayState.Disconnected;
     bool _tsRunning, _userHidden, _gameActive, _micTest, _peekForce;
-    DateTime _lastMuteBeep = DateTime.MinValue;
+    DateTime _lastMuteBeep = DateTime.MinValue, _lastMuteFlash = DateTime.MinValue;
     Theme? _previewTheme;
     readonly System.Windows.Threading.DispatcherTimer _peekTimer = new() { Interval = TimeSpan.FromMilliseconds(40) };
     SoundBind? _peekBind;
@@ -106,6 +107,7 @@ public partial class App : Application
         Mic.VoiceChanged += v => Dispatcher.BeginInvoke(() => OnVoiceWhileMuted(v));
         Voice = new Speech(Cfg);
         Discord = new DiscordPresence(Cfg);
+        Lights = new Rgb(Cfg);
         if (Cfg.PhoneKey == "") { Cfg.PhoneKey = NewPhoneKey(); Cfg.Save(); }
         Phone = new PhoneServer(() => _phoneJson, (cmd, arg) => Dispatcher.Invoke(() => OnPhoneCommand(cmd, arg)));
 
@@ -302,6 +304,9 @@ public partial class App : Application
             case NoticeKind.Poke when Cfg.SoundOnPoke: Sounds.Play(SoundKind.Poke); break;
         }
 
+        var flash = Cfg.RgbColorFor(n.Kind.ToString());
+        if (flash != "") Lights.Flash(flash);
+
         if (Voice.Wants(n) && (!Cfg.TtsOnlyInGame || GameDetector.IsGameInForeground(Cfg) == true))
             Voice.Say(n.Speech ?? n.Text);
     }
@@ -363,6 +368,11 @@ public partial class App : Application
         {
             _lastMuteBeep = DateTime.Now;
             Sounds.Play(SoundKind.MuteWarning);
+        }
+        if (real && Cfg.RgbColorFor("MuteWarning") is { Length: > 0 } c && (DateTime.Now - _lastMuteFlash).TotalSeconds > 4)
+        {
+            _lastMuteFlash = DateTime.Now;
+            Lights.Flash(c);
         }
     }
 

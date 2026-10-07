@@ -30,6 +30,7 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 | **Statystyki** | bieżąca sesja oraz historia dni, tygodni i miesięcy: kto ile był na serwerze i mówił, z wykresami; eksport do CSV |
 | **Archiwum czatu** | wiadomości i szturchnięcia zapisywane z datą, z wyszukiwarką |
 | **Panel na telefonie** | strona w sieci domowej (kod QR): lista osób, ostatnie wiadomości, przyciski bindów, „zatrzymaj wszystko” |
+| **Podświetlenie RGB** | błysk klawiatury lub myszy kolorem przy szturchnięciu, wejściu znajomego i innych zdarzeniach (przez OpenRGB; po błysku podświetlenie wraca do Twoich ustawień) |
 | **Status w Discordzie** | „Na TeamSpeaku: Pluton 6 · 3 osób na kanale” z licznikiem czasu w Twoim profilu Discord |
 | **Lektor** | czyta powiadomienia na głos (wejścia, wiadomości, szturchnięcia, znajomi); słychać go także w grach z wyłącznym pełnym ekranem |
 | **Klawisze podglądu** | przytrzymaj klawisz: pełna lista osób na serwerze albo ostatnie 10 wiadomości; po puszczeniu wszystko wraca |
@@ -75,6 +76,10 @@ W **Ustawieniach → Telefon i Discord** zaznacz „Włącz panel na telefonie�
 ### Status w Discordzie
 
 Discord wymaga identyfikatora aplikacji (Application ID). Utwórz go raz na [discord.com/developers/applications](https://discord.com/developers/applications): **New Application**, nazwa np. „TeamSpeak”, potem skopiuj **Application ID** do ustawień. Status działa, gdy na komputerze jest uruchomiona aplikacja Discord.
+
+### Podświetlenie RGB
+
+Wymaga darmowego programu [OpenRGB](https://openrgb.org) z włączonym serwerem SDK: karta **SDK Server → Start Server**. Potem w **Ustawieniach → Integracje** zaznacz „Włącz błyski RGB” i wybierz zdarzenia oraz kolory. Przed błyskiem program zapisuje bieżące podświetlenie jako profil OpenRGB `TS6Overlay-restore`, a po błysku je przywraca.
 
 ### OBS
 
