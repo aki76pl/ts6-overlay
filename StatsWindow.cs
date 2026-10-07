@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using static TS6Overlay.L;
 
 namespace TS6Overlay;
 
@@ -22,7 +23,7 @@ public sealed class StatsWindow : Window
     public StatsWindow(Stats stats)
     {
         _stats = stats;
-        Title = "TS6 Overlay — statystyki sesji";
+        Title = T("TS6 Overlay — statystyki sesji");
         Width = 640; Height = 620; MinWidth = 480; MinHeight = 400;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Bg; Foreground = Fg;
@@ -43,7 +44,7 @@ public sealed class StatsWindow : Window
         buttons.Children.Add(Btn("Eksportuj CSV…", Export));
         buttons.Children.Add(Btn("Wyczyść", () =>
         {
-            if (MessageBox.Show(this, "Wyczyścić statystyki tej sesji?", "TS6 Overlay", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show(this, T("Wyczyścić statystyki tej sesji?"), "TS6 Overlay", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             { _stats.Clear(); _historyShown = -1; Refresh(); }
         }));
 
@@ -52,7 +53,7 @@ public sealed class StatsWindow : Window
             grid.RowDefinitions.Add(new RowDefinition { Height = h });
         Add(grid, _summary, 0);
         Add(grid, _people, 1);
-        Add(grid, new TextBlock { Text = "Historia", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 10, 0, 4) }, 2);
+        Add(grid, new TextBlock { Text = T("Historia"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 10, 0, 4) }, 2);
         Add(grid, _history, 3);
         Add(grid, buttons, 4);
         Content = grid;
@@ -66,11 +67,11 @@ public sealed class StatsWindow : Window
     static void Add(Grid g, UIElement e, int row) { Grid.SetRow(e, row); g.Children.Add(e); }
 
     static GridViewColumn Col(string header, string path, double width) =>
-        new() { Header = header, Width = width, DisplayMemberBinding = new System.Windows.Data.Binding(path) };
+        new() { Header = T(header), Width = width, DisplayMemberBinding = new System.Windows.Data.Binding(path) };
 
     static Button Btn(string text, Action click)
     {
-        var b = new Button { Content = text, Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 0) };
+        var b = new Button { Content = T(text), Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 0) };
         b.Click += (_, _) => click();
         return b;
     }
@@ -88,7 +89,7 @@ public sealed class StatsWindow : Window
             total > 0 ? $"{p.TotalTalk.TotalSeconds / total:P0}" : "—",
             p.Joins, p.Messages, p.TalkingSince != null)).ToList();
         _people.SelectedIndex = sel;
-        _summary.Text = $"Sesja od {_stats.Started:HH:mm} ({Fmt(DateTime.Now - _stats.Started)}) · łączny czas rozmów: {Fmt(TimeSpan.FromSeconds(total))} · osób: {people.Count}";
+        _summary.Text = T("Sesja od {0:HH:mm} ({1}) · łączny czas rozmów: {2} · osób: {3}", _stats.Started, Fmt(DateTime.Now - _stats.Started), Fmt(TimeSpan.FromSeconds(total)), people.Count);
 
         if (_historyShown != _stats.History.Count)
         {
@@ -102,6 +103,6 @@ public sealed class StatsWindow : Window
         var d = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = $"ts6-statystyki-{DateTime.Now:yyyy-MM-dd-HHmm}.csv" };
         if (d.ShowDialog(this) != true) return;
         try { _stats.ExportCsv(d.FileName); }
-        catch (Exception ex) { MessageBox.Show(this, "Nie udało się zapisać: " + ex.Message, "TS6 Overlay"); }
+        catch (Exception ex) { MessageBox.Show(this, T("Nie udało się zapisać: {0}", ex.Message), "TS6 Overlay"); }
     }
 }

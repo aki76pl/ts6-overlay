@@ -19,7 +19,7 @@ public sealed class SoundBind
     public int Volume { get; set; } = 80;
     public bool Enabled { get; set; } = true;
 
-    public string KeyText => Key == 0 ? "— brak —" : Format(Modifiers, Key);
+    public string KeyText => Key == 0 ? L.T("— brak —") : Format(Modifiers, Key);
 
     public static string Format(uint mods, int vk)
     {
@@ -76,6 +76,8 @@ public sealed class BindManager : IDisposable
     /// <summary>Bindy, których nie udało się zarejestrować (skrót zajęty przez inny program).</summary>
     public HashSet<string> Failed { get; } = new();
     public event Action? Changed;
+    /// <summary>Naciśnięto klawisz podglądu (serwer albo wiadomości) — App sprawdza, kiedy zostanie puszczony.</summary>
+    public event Action<SoundBind>? PeekPressed;
 
     public BindManager(Config cfg)
     {
@@ -89,12 +91,16 @@ public sealed class BindManager : IDisposable
     {
         UnregisterAll();
         Failed.Clear();
-        // Skrót zatrzymania ma własne id, przed bindami.
-        var stop = _cfg.StopBind;
-        if (stop.Key != 0)
+        // Skróty specjalne mają własne id, przed bindami.
+        int special = BaseId - 1;
+        foreach (var sb in new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind })
         {
-            if (RegisterHotKey(_wnd.Handle, BaseId - 1, stop.Modifiers | MOD_NOREPEAT, (uint)stop.Key)) _registered[BaseId - 1] = stop;
-            else Failed.Add(stop.Id);
+            if (sb.Key != 0)
+            {
+                if (RegisterHotKey(_wnd.Handle, special, sb.Modifiers | MOD_NOREPEAT, (uint)sb.Key)) _registered[special] = sb;
+                else Failed.Add(sb.Id);
+            }
+            special--;
         }
         int id = BaseId;
         foreach (var b in _cfg.Binds)
@@ -119,6 +125,7 @@ public sealed class BindManager : IDisposable
         if (msg == WM_HOTKEY && _registered.TryGetValue(w.ToInt32(), out var b))
         {
             if (b == _cfg.StopBind) StopAll();
+            else if (b == _cfg.PeekServerBind || b == _cfg.PeekMessagesBind) PeekPressed?.Invoke(b);
             else Trigger(b);
             handled = true;
         }
@@ -163,7 +170,11 @@ public sealed class BindManager : IDisposable
     {
         Stop();
         Sounds.Stop();
+        StoppedAll?.Invoke();
     }
+
+    /// <summary>Np. żeby uciszyć też lektora.</summary>
+    public event Action? StoppedAll;
 
     public void Stop()
     {

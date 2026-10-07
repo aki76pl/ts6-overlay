@@ -12,6 +12,19 @@ public sealed class Favorite
     public string SoundPath { get; set; } = "";
 }
 
+/// <summary>Profil nakładki dla gry: własna pozycja, rozmiar, przezroczystość i motyw.</summary>
+public sealed class GameProfile
+{
+    /// <summary>Nazwa procesu bez .exe, np. cs2.</summary>
+    public string Game { get; set; } = "";
+    public double Left { get; set; } = 20;
+    public double Top { get; set; } = 200;
+    public double Scale { get; set; } = 1.0;
+    public double Opacity { get; set; } = 0.9;
+    /// <summary>Pusty = motyw główny.</summary>
+    public string Theme { get; set; } = "";
+}
+
 public sealed class Ignored
 {
     public string Uid { get; set; } = "";
@@ -30,6 +43,10 @@ public sealed class Config
     /// <summary>Ile sekund wisi powiadomienie „wszedł / wyszedł”.</summary>
     public int EventSeconds { get; set; } = 6;
     public string Theme { get; set; } = "Terminal";
+    /// <summary>"pl", "en" albo "" = wg języka Windows.</summary>
+    public string Language { get; set; } = "";
+    /// <summary>Pokazuj wszystkie serwery, z którymi połączony jest TS (nie tylko aktywny).</summary>
+    public bool ShowAllServers { get; set; } = true;
 
     // --- dźwięki ---
     /// <summary>Dźwięk, gdy ktoś wchodzi na Twój kanał.</summary>
@@ -70,6 +87,35 @@ public sealed class Config
     public List<string> Games { get; set; } = new();
     /// <summary>Traktuj każdą aplikację na pełnym ekranie (poza przeglądarkami) jak grę.</summary>
     public bool GameFullscreenAny { get; set; } = true;
+
+    // --- lektor (czytanie na głos) ---
+    public bool TtsEnabled { get; set; } = false;
+    public bool TtsJoin { get; set; } = true;
+    public bool TtsLeave { get; set; } = false;
+    public bool TtsMessages { get; set; } = true;
+    public bool TtsPokes { get; set; } = true;
+    public bool TtsFriends { get; set; } = true;
+    /// <summary>Czytaj tylko, gdy na pierwszym planie jest gra.</summary>
+    public bool TtsOnlyInGame { get; set; } = false;
+    public string TtsVoice { get; set; } = "";
+    /// <summary>Tempo -10…10.</summary>
+    public int TtsRate { get; set; } = 1;
+    public int TtsVolume { get; set; } = 80;
+
+    // --- podgląd pod klawiszem ---
+    public SoundBind PeekServerBind { get; set; } = new() { Id = "peek-server", Name = "Podgląd serwera" };
+    public SoundBind PeekMessagesBind { get; set; } = new() { Id = "peek-messages", Name = "Podgląd wiadomości" };
+
+    // --- profile gier ---
+    public List<GameProfile> Profiles { get; set; } = new();
+
+    // --- obserwowane kanały i znajomi ---
+    public List<string> WatchedChannels { get; set; } = new();
+    public bool WatchedHideEmpty { get; set; } = false;
+    public bool WatchedNotify { get; set; } = false;
+    /// <summary>Powiadomienie, gdy ulubiony wchodzi na serwer.</summary>
+    public bool FriendOnline { get; set; } = true;
+    public bool FriendOffline { get; set; } = false;
 
     // --- osoby ---
     public List<Favorite> Favorites { get; set; } = new();

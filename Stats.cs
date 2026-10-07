@@ -69,11 +69,11 @@ public sealed class Stats
     public void ExportCsv(string path)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Nick;Czas mówienia (s);Wejścia na kanał;Wiadomości");
+        sb.AppendLine(L.T("Nick;Czas mówienia (s);Wejścia na kanał;Wiadomości"));
         foreach (var p in People.Values.OrderByDescending(p => p.TotalTalk))
             sb.AppendLine($"{Csv(p.Nickname)};{(int)p.TotalTalk.TotalSeconds};{p.Joins};{p.Messages}");
         sb.AppendLine();
-        sb.AppendLine("Czas;Zdarzenie");
+        sb.AppendLine(L.T("Czas;Zdarzenie"));
         foreach (var h in History)
             sb.AppendLine($"{h.Time:yyyy-MM-dd HH:mm:ss};{Csv(h.Text)}");
         File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));

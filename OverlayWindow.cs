@@ -15,6 +15,8 @@ public sealed class OverlayWindow : Window
     bool _editMode, _ctrlDrag;
 
     public OverlayView View { get; }
+    /// <summary>Użytkownik przesunął nakładkę — App zapisuje pozycję w ustawieniach albo w profilu gry.</summary>
+    public event Action<double, double>? Moved;
 
     public OverlayWindow(Config cfg)
     {
@@ -33,14 +35,14 @@ public sealed class OverlayWindow : Window
 
         View = new OverlayView(cfg);
         Content = View;
-        ApplyScale();
+        ApplyScale(cfg.Scale, cfg.Opacity);
         View.ApplyTheme(Theme.ByName(cfg.Theme));
 
         MouseLeftButtonDown += (_, e) =>
         {
             if (!(_editMode || _ctrlDrag) || e.ButtonState != MouseButtonState.Pressed) return;
             DragMove();
-            _cfg.Left = Left; _cfg.Top = Top; _cfg.Save();
+            Moved?.Invoke(Left, Top);
         };
         SourceInitialized += (_, _) => ApplyClickThrough();
 
@@ -73,16 +75,16 @@ public sealed class OverlayWindow : Window
         set
         {
             _editMode = value;
-            View.SetHighlight(value, value ? "Przeciągnij mnie myszką, potem „Zablokuj pozycję” w zasobniku" : null);
+            View.SetHighlight(value, value ? L.T("Przeciągnij mnie myszką, potem „Zablokuj pozycję” w zasobniku") : null);
             ApplyClickThrough();
-            if (!value) { _cfg.Left = Left; _cfg.Top = Top; _cfg.Save(); }
+            if (!value) Moved?.Invoke(Left, Top);
         }
     }
 
-    public void ApplyScale()
+    public void ApplyScale(double scale, double opacity)
     {
-        View.LayoutTransform = new ScaleTransform(_cfg.Scale, _cfg.Scale);
-        Opacity = _cfg.Opacity;
+        View.LayoutTransform = new ScaleTransform(scale, scale);
+        Opacity = opacity;
     }
 
     // ---------- click-through ----------

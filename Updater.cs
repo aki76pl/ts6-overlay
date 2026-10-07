@@ -69,7 +69,7 @@ public static class Updater
                 if (total > 0) progress?.Report((int)(done * 100 / total));
             }
         }
-        if (new FileInfo(tmp).Length < 100_000) throw new InvalidDataException("Pobrany plik jest uszkodzony.");
+        if (new FileInfo(tmp).Length < 100_000) throw new InvalidDataException(L.T("Pobrany plik jest uszkodzony."));
 
         if (File.Exists(old)) File.Delete(old);
         File.Move(exe, old);

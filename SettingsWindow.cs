@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using static TS6Overlay.L;
 using Forms = System.Windows.Forms;
 
 namespace TS6Overlay;
@@ -30,7 +31,7 @@ public sealed class SettingsWindow : Window
     {
         _app = app;
         _cfg = app.Cfg;
-        Title = $"TS6 Overlay {Updater.Current} — ustawienia";
+        Title = T("TS6 Overlay {0} — ustawienia", Updater.Current);
         Width = 1180; Height = 760; MinWidth = 860; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Bg;
@@ -53,13 +54,14 @@ public sealed class SettingsWindow : Window
         _tabs.Items.Add(Tab("Bindy", BindsTab()));
         _tabs.Items.Add(Tab("Osoby", PeopleTab()));
         _tabs.Items.Add(Tab("OBS", ObsTab()));
-        _tabs.Items.Add(Tab("Aktualizacje", UpdatesTab()));
+        _tabs.Items.Add(Tab("Aktualizacje i kopia", UpdatesTab()));
         _tabs.SelectionChanged += (_, e) =>
         {
             if (e.Source != _tabs) return;
             if (_tabs.SelectedIndex != TabEditor) { _app.PreviewTheme(null); ShowTheme(Theme.ByName(_cfg.Theme)); }
             else ShowTheme(_edit);
             if (_tabs.SelectedIndex == TabPeople) RebuildPeople();
+            if (_tabs.SelectedIndex == TabBehavior) RebuildProfiles();
             if (_tabs.SelectedIndex != TabNotify) _app.MicTest = false;
             if (_tabs.SelectedIndex == TabBinds) RebuildBinds();
             else CancelCapture();
@@ -130,7 +132,7 @@ public sealed class SettingsWindow : Window
             {
                 var t = Theme.ByName(_cfg.Theme);
                 if (t.IsBuiltin) { Info("Wbudowanych motywów nie można usunąć."); return; }
-                if (!Confirm($"Usunąć motyw „{t.Name}”?")) return;
+                if (!Confirm(T("Usunąć motyw „{0}”?", t.Name))) return;
                 Theme.DeleteCustom(t.Name);
                 _cfg.Theme = "Terminal";
                 FillThemeCombo();
@@ -138,27 +140,43 @@ public sealed class SettingsWindow : Window
             })));
         p.Children.Add(Hint("Motywy od znajomych to pliki *.ts6theme — wczytasz je przyciskiem „Importuj…”."));
 
+        p.Children.Add(Header("Język"));
+        var lang = new ComboBox { MinWidth = 240 };
+        lang.Items.Add(T("Automatycznie (jak Windows)"));
+        lang.Items.Add("Polski");
+        lang.Items.Add("English");
+        lang.SelectedIndex = _cfg.Language switch { "pl" => 1, "en" => 2, _ => 0 };
+        lang.SelectionChanged += (_, _) =>
+        {
+            var v = lang.SelectedIndex switch { 1 => "pl", 2 => "en", _ => "" };
+            if (v == _cfg.Language) return;
+            _cfg.Language = v;
+            _cfg.Save();
+            if (Confirm(T("Język zmieni się po ponownym uruchomieniu programu. Uruchomić ponownie teraz?"))) _app.Restart();
+        };
+        p.Children.Add(Row(lang));
+
         p.Children.Add(Header("Rozmiar i przezroczystość"));
         p.Children.Add(SliderRow("Rozmiar", 60, 200, () => _cfg.Scale * 100, v => _cfg.Scale = v / 100, v => $"{v:0}%"));
         p.Children.Add(SliderRow("Przezroczystość", 30, 100, () => _cfg.Opacity * 100, v => _cfg.Opacity = v / 100, v => $"{v:0}%"));
 
         p.Children.Add(Header("Zawartość"));
         p.Children.Add(Check("Pokazuj wszystkich na kanale (odznacz = tylko mówiący i powiadomienia)", () => _cfg.ShowChannelList, v => _cfg.ShowChannelList = v));
+        p.Children.Add(Check("Pokazuj wszystkie serwery, z którymi połączony jest TeamSpeak (nie tylko aktywny)", () => _cfg.ShowAllServers, v => _cfg.ShowAllServers = v));
         p.Children.Add(SliderRow("Czas powiadomień wejścia/wyjścia", 2, 30, () => _cfg.EventSeconds, v => _cfg.EventSeconds = (int)v, v => $"{v:0} s"));
         p.Children.Add(SliderRow("Czas wiadomości i szturchnięć", 3, 60, () => _cfg.MessageSeconds, v => _cfg.MessageSeconds = (int)v, v => $"{v:0} s"));
 
         p.Children.Add(Header("Położenie"));
         p.Children.Add(Hint("Przytrzymaj Ctrl i przeciągnij nakładkę lewym przyciskiem myszy. Ctrl+Shift+O ukrywa/pokazuje nakładkę."));
-        p.Children.Add(Row(Btn("Przywróć pozycję (lewy górny róg)", () => { _cfg.Left = 20; _cfg.Top = 200; RestartOverlayPosition(); })));
+        p.Children.Add(Row(Btn("Przywróć pozycję (lewy górny róg)", () =>
+        {
+            if (_app.ActiveProfile is { } prof) { prof.Left = 20; prof.Top = 200; } else { _cfg.Left = 20; _cfg.Top = 200; }
+            _app.ResetOverlayPosition();
+            Changed();
+        })));
         return Scroll(p);
     }
 
-    void RestartOverlayPosition()
-    {
-        foreach (Window w in Application.Current.Windows)
-            if (w is OverlayWindow o) { o.Left = _cfg.Left; o.Top = _cfg.Top; }
-        Changed();
-    }
 
     void FillThemeCombo()
     {
@@ -170,7 +188,7 @@ public sealed class SettingsWindow : Window
 
     void ImportTheme()
     {
-        var d = new Microsoft.Win32.OpenFileDialog { Filter = "Motyw TS6 Overlay (*.ts6theme)|*.ts6theme|JSON (*.json)|*.json", Title = "Importuj motyw" };
+        var d = new Microsoft.Win32.OpenFileDialog { Filter = T("Motyw TS6 Overlay") + " (*.ts6theme)|*.ts6theme|JSON (*.json)|*.json", Title = T("Importuj motyw") };
         if (d.ShowDialog(this) != true) return;
         try
         {
@@ -178,17 +196,17 @@ public sealed class SettingsWindow : Window
             _cfg.Theme = t.Name;
             FillThemeCombo();
             Changed();
-            Info($"Zaimportowano motyw „{t.Name}”.");
+            Info(T("Zaimportowano motyw „{0}”.", t.Name));
         }
-        catch (Exception ex) { Info("Nie udało się wczytać motywu: " + ex.Message); }
+        catch (Exception ex) { Info(T("Nie udało się wczytać motywu: {0}", ex.Message)); }
     }
 
     void ExportTheme(Theme t)
     {
-        var d = new Microsoft.Win32.SaveFileDialog { Filter = "Motyw TS6 Overlay (*.ts6theme)|*.ts6theme", FileName = t.Name + Theme.Extension, Title = "Eksportuj motyw" };
+        var d = new Microsoft.Win32.SaveFileDialog { Filter = T("Motyw TS6 Overlay") + " (*.ts6theme)|*.ts6theme", FileName = t.Name + Theme.Extension, Title = T("Eksportuj motyw") };
         if (d.ShowDialog(this) != true) return;
         try { t.Export(d.FileName); Info("Zapisano. Wyślij ten plik znajomemu — wczyta go przyciskiem „Importuj…”."); }
-        catch (Exception ex) { Info("Nie udało się zapisać: " + ex.Message); }
+        catch (Exception ex) { Info(T("Nie udało się zapisać: {0}", ex.Message)); }
     }
 
     // =====================================================================
@@ -263,7 +281,7 @@ public sealed class SettingsWindow : Window
         _loadingEditor = true;
         _edit = t;
         if (_baseCombo != null) _baseCombo.SelectedItem = t.Name;
-        _nameBox.Text = copy ? UniqueName(t.Name + " (mój)") : t.Name;
+        _nameBox.Text = copy ? UniqueName(t.Name + T(" (mój)")) : t.Name;
         _fontCombo.SelectedItem = t.Font;
         _fontCombo.Text = t.Font;
         _radius.Value = t.Radius;
@@ -347,7 +365,7 @@ public sealed class SettingsWindow : Window
         if (Theme.Builtin.Any(b => b.Name == name)) { Info("Ta nazwa należy do wbudowanego motywu — wybierz inną."); return; }
         var t = _edit with { Name = name };
         try { t.SaveCustom(); }
-        catch (Exception ex) { Info("Nie udało się zapisać: " + ex.Message); return; }
+        catch (Exception ex) { Info(T("Nie udało się zapisać: {0}", ex.Message)); return; }
         _cfg.Theme = name;
         _app.PreviewTheme(null);
         FillThemeCombo();
@@ -356,7 +374,7 @@ public sealed class SettingsWindow : Window
         _loadingEditor = false;
         _edit = t;
         Changed();
-        Info($"Zapisano motyw „{name}” i ustawiono go na nakładce.");
+        Info(T("Zapisano motyw „{0}” i ustawiono go na nakładce.", name));
     }
 
     // =====================================================================
@@ -376,8 +394,8 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Header("Autoukrywanie"));
         p.Children.Add(Check("Ukrywaj, gdy nikt nie mówi", () => _cfg.AutoHide, v => _cfg.AutoHide = v));
         p.Children.Add(SliderRow("Po ilu sekundach ciszy", 2, 60, () => _cfg.AutoHideSeconds, v => _cfg.AutoHideSeconds = (int)v, v => $"{v:0} s"));
-        var fade = new RadioButton { Content = "Nakładka blednie", IsChecked = _cfg.AutoHideMode != "Header", Foreground = Fg, Margin = new Thickness(0, 4, 16, 4) };
-        var header = new RadioButton { Content = "Zostaje sam nagłówek z nazwą kanału", IsChecked = _cfg.AutoHideMode == "Header", Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
+        var fade = new RadioButton { Content = T("Nakładka blednie"), IsChecked = _cfg.AutoHideMode != "Header", Foreground = Fg, Margin = new Thickness(0, 4, 16, 4) };
+        var header = new RadioButton { Content = T("Zostaje sam nagłówek z nazwą kanału"), IsChecked = _cfg.AutoHideMode == "Header", Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
         fade.Checked += (_, _) => { _cfg.AutoHideMode = "Fade"; Changed(); };
         header.Checked += (_, _) => { _cfg.AutoHideMode = "Header"; Changed(); };
         p.Children.Add(Row(fade, header));
@@ -409,10 +427,74 @@ public sealed class SettingsWindow : Window
             })));
         p.Children.Add(Hint("Uruchom grę, kliknij „Odśwież listę programów”, wybierz ją z listy i „Dodaj”. Możesz też wpisać nazwę ręcznie, np. cs2."));
 
+        p.Children.Add(Header("Profile gier"));
+        p.Children.Add(Hint("Osobna pozycja, rozmiar, przezroczystość i motyw nakładki dla wybranej gry. Program przełącza profil sam, gdy gra jest na pierwszym planie. " +
+                            "Gdy profil jest aktywny, przesunięcie nakładki (Ctrl + mysz) zapisuje pozycję w profilu."));
+        _profileList = new StackPanel();
+        p.Children.Add(_profileList);
+        var profProc = new ComboBox { MinWidth = 200, IsEditable = true, ItemsSource = GameDetector.WindowedProcesses() };
+        p.Children.Add(Row(profProc,
+            Btn("+ Dodaj profil", () =>
+            {
+                var g = GameDetector.Normalize(profProc.Text ?? "");
+                if (g == "") { Info(T("Wybierz grę z listy albo wpisz nazwę pliku .exe.")); return; }
+                if (_cfg.Profiles.Any(x => x.Game.Equals(g, StringComparison.OrdinalIgnoreCase))) { Info(T("Ta gra ma już profil.")); return; }
+                var (l, t) = _app.OverlayPosition;
+                _cfg.Profiles.Add(new GameProfile { Game = g, Left = l, Top = t, Scale = _cfg.Scale, Opacity = _cfg.Opacity });
+                Changed();
+                RebuildProfiles();
+            }),
+            Btn("Odśwież listę programów", () => profProc.ItemsSource = GameDetector.WindowedProcesses())));
+        RebuildProfiles();
+
         p.Children.Add(Header("Diagnostyka"));
         p.Children.Add(Check("Zapisuj surowe zdarzenia TeamSpeak (events.log)", () => _cfg.LogRawEvents, v => _cfg.LogRawEvents = v));
         p.Children.Add(Row(Btn("Otwórz folder ustawień", () => Process.Start(new ProcessStartInfo("explorer.exe", Config.Dir)))));
         return Scroll(p);
+    }
+
+    StackPanel? _profileList;
+
+    void RebuildProfiles()
+    {
+        if (_profileList == null) return;
+        _profileList.Children.Clear();
+        if (_cfg.Profiles.Count == 0) _profileList.Children.Add(Hint(T("Brak profili — wybierz grę poniżej i kliknij „+ Dodaj profil”.")));
+        foreach (var prof in _cfg.Profiles.ToList())
+        {
+            var box = new StackPanel();
+            bool active = _app.ActiveProfile == prof;
+            box.Children.Add(Row(
+                new TextBlock { Text = "🎮 " + prof.Game + (active ? T("  (aktywny)") : ""), Foreground = active ? AccentB : Fg, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), MinWidth = 160 },
+                Btn("Zapisz bieżącą pozycję", () =>
+                {
+                    var (l, t) = _app.OverlayPosition;
+                    prof.Left = l; prof.Top = t;
+                    Changed();
+                    Info(T("Zapisano pozycję nakładki w profilu „{0}”.", prof.Game));
+                }),
+                Btn("Usuń", () => { _cfg.Profiles.Remove(prof); Changed(); RebuildProfiles(); })));
+
+            var theme = new ComboBox { MinWidth = 170 };
+            theme.Items.Add(T("(motyw główny)"));
+            foreach (var t in Theme.All) theme.Items.Add(t.Name);
+            theme.SelectedItem = prof.Theme == "" ? theme.Items[0] : Theme.ByName(prof.Theme).Name;
+            theme.SelectionChanged += (_, _) => { prof.Theme = theme.SelectedIndex <= 0 ? "" : (string)theme.SelectedItem; Changed(); };
+
+            var scale = new Slider { Minimum = 60, Maximum = 200, Value = prof.Scale * 100, Width = 110, IsSnapToTickEnabled = true, TickFrequency = 5, VerticalAlignment = VerticalAlignment.Center };
+            var scaleT = Label($"{prof.Scale * 100:0}%", 46, dim: true);
+            scale.ValueChanged += (_, _) => { prof.Scale = scale.Value / 100; scaleT.Text = $"{scale.Value:0}%"; Changed(); };
+            var op = new Slider { Minimum = 30, Maximum = 100, Value = prof.Opacity * 100, Width = 110, IsSnapToTickEnabled = true, TickFrequency = 5, VerticalAlignment = VerticalAlignment.Center };
+            var opT = Label($"{prof.Opacity * 100:0}%", 46, dim: true);
+            op.ValueChanged += (_, _) => { prof.Opacity = op.Value / 100; opT.Text = $"{op.Value:0}%"; Changed(); };
+
+            var line2 = Row(Label(T("motyw"), dim: true), theme, Label(T("rozmiar"), dim: true), scale, scaleT, Label(T("krycie"), dim: true), op, opT);
+            line2.Margin = new Thickness(20, 0, 0, 0);
+            box.Children.Add(line2);
+            var card = Card_(box);
+            card.Margin = new Thickness(0, 4, 0, 4);
+            _profileList.Children.Add(card);
+        }
     }
 
     void RefreshGames() => _gamesList.ItemsSource = _cfg.Games.ToList();
@@ -436,8 +518,8 @@ public sealed class SettingsWindow : Window
 
         p.Children.Add(Header("Dźwięki"));
         p.Children.Add(SliderRow("Głośność", 0, 100, () => _cfg.Volume, v => _cfg.Volume = (int)v, v => $"{v:0}%"));
-        p.Children.Add(Hint("Każdemu zdarzeniu możesz przypisać własny dźwięk: kliknij „Wybierz…” albo przeciągnij plik (.wav, .mp3, .wma, .aiff, .m4a) na wiersz. " +
-                            $"Program kopiuje plik do swojego folderu, a odtwarza najwyżej {Sounds.MaxSeconds:0} s."));
+        p.Children.Add(Hint(T("Każdemu zdarzeniu możesz przypisać własny dźwięk: kliknij „Wybierz…” albo przeciągnij plik (.wav, .mp3, .wma, .aiff, .m4a) na wiersz. ") +
+                            T("Program kopiuje plik do swojego folderu, a odtwarza najwyżej {0} s.", Sounds.MaxSeconds)));
         p.Children.Add(SoundRow("Gdy ktoś wchodzi na kanał", () => _cfg.SoundOnJoin, v => _cfg.SoundOnJoin = v, SoundKind.Join));
         p.Children.Add(SoundRow("Gdy ktoś wychodzi z kanału", () => _cfg.SoundOnLeave, v => _cfg.SoundOnLeave = v, SoundKind.Leave));
         p.Children.Add(SoundRow("Wiadomość", () => _cfg.SoundOnMessage, v => _cfg.SoundOnMessage = v, SoundKind.Message));
@@ -450,6 +532,34 @@ public sealed class SettingsWindow : Window
             Process.Start(new ProcessStartInfo("explorer.exe", Sounds.Dir));
         })));
 
+        p.Children.Add(Header("Lektor (czytanie na głos)"));
+        p.Children.Add(Hint("Lektor Windows czyta powiadomienia na głos — słychać go także w grach z wyłącznym pełnym ekranem, gdzie nakładki nie widać."));
+        p.Children.Add(Check("Włącz lektora", () => _cfg.TtsEnabled, v => { _cfg.TtsEnabled = v; if (!v) _app.Voice.Stop(); }));
+        var ttsKinds = Row(
+            Check("wejścia", () => _cfg.TtsJoin, v => _cfg.TtsJoin = v),
+            Check("wyjścia", () => _cfg.TtsLeave, v => _cfg.TtsLeave = v),
+            Check("wiadomości", () => _cfg.TtsMessages, v => _cfg.TtsMessages = v),
+            Check("szturchnięcia", () => _cfg.TtsPokes, v => _cfg.TtsPokes = v),
+            Check("znajomi i obserwowane kanały", () => _cfg.TtsFriends, v => _cfg.TtsFriends = v));
+        foreach (var c in ttsKinds.Children.OfType<CheckBox>()) c.Margin = new Thickness(0, 4, 14, 4);
+        ttsKinds.Margin = new Thickness(20, 0, 0, 0);
+        p.Children.Add(ttsKinds);
+        p.Children.Add(Check("Czytaj tylko, gdy gra jest na pierwszym planie", () => _cfg.TtsOnlyInGame, v => _cfg.TtsOnlyInGame = v));
+        var voice = new ComboBox { MinWidth = 260 };
+        var voices = Speech.Voices();
+        voice.Items.Add(T("Automatycznie (w języku programu)"));
+        foreach (var v in voices) voice.Items.Add(v);
+        voice.SelectedIndex = Math.Max(0, voices.IndexOf(_cfg.TtsVoice) + 1);
+        voice.SelectionChanged += (_, _) => { _cfg.TtsVoice = voice.SelectedIndex <= 0 ? "" : voices[voice.SelectedIndex - 1]; Changed(); };
+        p.Children.Add(Row(Label("Głos", 100), voice, Btn("▶ Test", () => _app.Voice.Say(T("{0} wchodzi", "Kamil") + ". " + T("{0} pisze: {1}", "Ola", T("idziemy na B?"))))));
+        p.Children.Add(SliderRow("Tempo mowy", -5, 8, () => _cfg.TtsRate, v => _cfg.TtsRate = (int)v, v => $"{v:+0;-0;0}"));
+        p.Children.Add(SliderRow("Głośność lektora", 0, 100, () => _cfg.TtsVolume, v => _cfg.TtsVolume = (int)v, v => $"{v:0}%"));
+
+        p.Children.Add(Header("Znajomi"));
+        p.Children.Add(Check("Powiadamiaj, gdy ulubiony wchodzi na serwer („★ … jest online”)", () => _cfg.FriendOnline, v => _cfg.FriendOnline = v));
+        p.Children.Add(Check("Powiadamiaj, gdy ulubiony wychodzi z serwera", () => _cfg.FriendOffline, v => _cfg.FriendOffline = v));
+        p.Children.Add(Hint("Ulubionych dodajesz w zakładce „Osoby”."));
+
         p.Children.Add(Header("Mikrofon wyciszony"));
         p.Children.Add(Check("Pokazuj czerwony pasek, gdy mikrofon lub głośniki są wyciszone", () => _cfg.MuteWarning, v => _cfg.MuteWarning = v));
         p.Children.Add(Check("Ostrzegaj, gdy mówisz do wyciszonego mikrofonu (pasek miga)", () => _cfg.MuteVoiceDetect, v => _cfg.MuteVoiceDetect = v));
@@ -460,7 +570,7 @@ public sealed class SettingsWindow : Window
         var meter = new Grid { Width = 300 };
         meter.Children.Add(_micLevel);
         meter.Children.Add(_micThreshold);
-        var testBtn = new ToggleButton { Content = "Test mikrofonu", Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(10, 0, 0, 0) };
+        var testBtn = new ToggleButton { Content = T("Test mikrofonu"), Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(10, 0, 0, 0) };
         testBtn.Checked += (_, _) => _app.MicTest = true;
         testBtn.Unchecked += (_, _) => _app.MicTest = false;
         p.Children.Add(Row(meter, testBtn));
@@ -483,7 +593,7 @@ public sealed class SettingsWindow : Window
         void Show()
         {
             var f = Sounds.AssignedFile(kind);
-            file.Text = f == null ? "dźwięk wbudowany" : $"♪ {System.IO.Path.GetFileName(f)} ({Sounds.Length(f).TotalSeconds:0.#} s)";
+            file.Text = f == null ? T("dźwięk wbudowany") : $"♪ {System.IO.Path.GetFileName(f)} ({Sounds.Length(f).TotalSeconds:0.#} s)";
             file.Foreground = f == null ? Dim : AccentB;
             file.ToolTip = f;
         }
@@ -499,9 +609,9 @@ public sealed class SettingsWindow : Window
                 Show();
                 Sounds.Play(kind);
                 if (len.TotalSeconds > Sounds.MaxSeconds)
-                    Info($"Plik trwa {len.TotalSeconds:0} s — przy powiadomieniu zagra tylko pierwsze {Sounds.MaxSeconds:0} s.");
+                    Info(T("Plik trwa {0:0} s — przy powiadomieniu zagra tylko pierwsze {1:0} s.", len.TotalSeconds, Sounds.MaxSeconds));
             }
-            catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
+            catch (Exception ex) { Info(T("Nie udało się wczytać dźwięku: {0}", ex.Message)); }
         }
 
         var buttons = Row(
@@ -510,8 +620,8 @@ public sealed class SettingsWindow : Window
             {
                 var d = new Microsoft.Win32.OpenFileDialog
                 {
-                    Title = "Dźwięk: " + label,
-                    Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a",
+                    Title = T("Dźwięk: {0}", T(label)),
+                    Filter = T("Dźwięki") + " (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a",
                 };
                 if (d.ShowDialog(this) == true) Assign(d.FileName);
             }),
@@ -570,10 +680,18 @@ public sealed class SettingsWindow : Window
         _stopRow = new ContentControl();
         p.Children.Add(_stopRow);
 
+        p.Children.Add(Header("Klawisze podglądu"));
+        p.Children.Add(Hint("Przytrzymaj klawisz, a nakładka pokaże pełną listę osób na serwerze albo ostatnie 10 wiadomości. Po puszczeniu klawisza wszystko wraca. " +
+                            "Działa nawet, gdy nakładka jest ukryta lub zbladła."));
+        _peekServerRow = new ContentControl();
+        _peekMsgRow = new ContentControl();
+        p.Children.Add(_peekServerRow);
+        p.Children.Add(_peekMsgRow);
+
         p.Children.Add(Header("Gdzie grać dźwięki bindów"));
         var dev = new ComboBox { MinWidth = 300 };
         var devices = BindManager.OutputDevices();
-        dev.Items.Add("Domyślne urządzenie (słyszysz tylko Ty)");
+        dev.Items.Add(T("Domyślne urządzenie (słyszysz tylko Ty)"));
         foreach (var d in devices) dev.Items.Add(d.name);
         dev.SelectedIndex = Math.Max(0, devices.FindIndex(d => d.name == _cfg.BindDeviceName) + 1);
         dev.SelectionChanged += (_, _) =>
@@ -590,25 +708,34 @@ public sealed class SettingsWindow : Window
         return Scroll(p);
     }
 
-    ContentControl? _stopRow;
+    ContentControl? _stopRow, _peekServerRow, _peekMsgRow;
 
     void RebuildStopRow()
     {
         if (_stopRow == null) return;
-        var s = _cfg.StopBind;
+        _stopRow.Content = SpecialKeyRow(_cfg.StopBind, T("Skrót:"), T("Nie przypisano — kliknij przycisk i naciśnij np. Pause albo Ctrl+Alt+0."));
+        _peekServerRow!.Content = SpecialKeyRow(_cfg.PeekServerBind, T("Serwer:"), T("Nie przypisano — np. Tab nie zadziała (gra go używa), spróbuj Ctrl+Tab albo `."));
+        _peekMsgRow!.Content = SpecialKeyRow(_cfg.PeekMessagesBind, T("Wiadomości:"), T("Nie przypisano — np. Ctrl+M."));
+    }
+
+    /// <summary>Skrót „specjalny” (zatrzymanie, podgląd): przycisk nagrywania, usuwanie, ostrzeżenia o kolizjach.</summary>
+    UIElement SpecialKeyRow(SoundBind s, string label, string emptyHint)
+    {
         var keyBtn = Btn(s.KeyText, () => { });
         keyBtn.MinWidth = 120;
-        keyBtn.ToolTip = "Kliknij i naciśnij klawisz lub skrót";
+        keyBtn.ToolTip = T("Kliknij i naciśnij klawisz lub skrót");
         keyBtn.Click += (_, _) => StartCapture(s, keyBtn);
-        var row = Row(Label("Skrót:", 60), keyBtn, Btn("Usuń skrót", () => { s.Key = 0; s.Modifiers = 0; Changed(); RebuildBinds(); }));
+        var row = Row(Label(label, 100), keyBtn, Btn("Usuń skrót", () => { s.Key = 0; s.Modifiers = 0; Changed(); RebuildBinds(); }));
         var box = new StackPanel();
         box.Children.Add(row);
-        string? warn = _app.Binds.Failed.Contains(s.Id) ? $"Skrót {s.KeyText} jest zajęty przez inny program — wybierz inny."
-            : s.Key != 0 && _cfg.Binds.Any(b => b.Enabled && b.Key == s.Key && b.Modifiers == s.Modifiers) ? "Ten sam skrót ma jeden z bindów."
-            : s.Key == 0 ? "Nie przypisano — kliknij przycisk i naciśnij np. Pause albo Ctrl+Alt+0." : null;
+        var specials = new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind };
+        string? warn = _app.Binds.Failed.Contains(s.Id) ? T("Skrót {0} jest zajęty przez inny program — wybierz inny.", s.KeyText)
+            : s.Key != 0 && _cfg.Binds.Any(b => b.Enabled && b.Key == s.Key && b.Modifiers == s.Modifiers) ? T("Ten sam skrót ma jeden z bindów.")
+            : s.Key != 0 && specials.Any(o => o != s && o.Key == s.Key && o.Modifiers == s.Modifiers) ? T("Ten sam skrót ma inny klawisz specjalny.")
+            : s.Key == 0 ? emptyHint : null;
         if (warn != null)
-            box.Children.Add(new TextBlock { Text = warn, Foreground = s.Key == 0 ? Dim : Brushes.IndianRed, FontSize = 12, Margin = new Thickness(0, 2, 0, 0) });
-        _stopRow.Content = box;
+            box.Children.Add(new TextBlock { Text = warn, Foreground = s.Key == 0 ? Dim : Brushes.IndianRed, FontSize = 12, Margin = new Thickness(100, 2, 0, 0), TextWrapping = TextWrapping.Wrap });
+        return box;
     }
 
     void RebuildBinds()
@@ -622,7 +749,7 @@ public sealed class SettingsWindow : Window
 
     UIElement BindRow(SoundBind b)
     {
-        var enabled = new CheckBox { IsChecked = b.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), ToolTip = "Włączony" };
+        var enabled = new CheckBox { IsChecked = b.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), ToolTip = T("Włączony") };
         enabled.Checked += (_, _) => { b.Enabled = true; Changed(); RebuildBinds(); };
         enabled.Unchecked += (_, _) => { b.Enabled = false; Changed(); RebuildBinds(); };
 
@@ -632,14 +759,14 @@ public sealed class SettingsWindow : Window
 
         var keyBtn = Btn(b.KeyText, () => { });
         keyBtn.MinWidth = 120;
-        keyBtn.ToolTip = "Kliknij i naciśnij klawisz lub skrót";
+        keyBtn.ToolTip = T("Kliknij i naciśnij klawisz lub skrót");
         keyBtn.Click += (_, _) => StartCapture(b, keyBtn);
 
         var line1 = Row(enabled, name, keyBtn,
             Btn("▶", () => _app.Binds.Trigger(b)),
             Btn("Usuń", () =>
             {
-                if (!Confirm($"Usunąć bind „{b.Name}”?")) return;
+                if (!Confirm(T("Usunąć bind „{0}”?", b.Name))) return;
                 _cfg.Binds.Remove(b);
                 Sounds.TryDelete(b.SoundPath);
                 Changed();
@@ -648,7 +775,7 @@ public sealed class SettingsWindow : Window
 
         var file = new TextBlock { MaxWidth = 230, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         bool hasFile = b.SoundPath != "" && System.IO.File.Exists(b.SoundPath);
-        file.Text = hasFile ? $"♪ {System.IO.Path.GetFileName(b.SoundPath)} ({Sounds.Length(b.SoundPath).TotalSeconds:0.#} s)" : "brak dźwięku";
+        file.Text = hasFile ? $"♪ {System.IO.Path.GetFileName(b.SoundPath)} ({Sounds.Length(b.SoundPath).TotalSeconds:0.#} s)" : T("brak dźwięku");
         file.Foreground = hasFile ? AccentB : Brushes.IndianRed;
 
         void Assign(string source)
@@ -662,7 +789,7 @@ public sealed class SettingsWindow : Window
                 RebuildBinds();
                 _app.Binds.Trigger(b);
             }
-            catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
+            catch (Exception ex) { Info(T("Nie udało się wczytać dźwięku: {0}", ex.Message)); }
         }
 
         var vol = new Slider { Minimum = 0, Maximum = 100, Value = b.Volume, Width = 110, VerticalAlignment = VerticalAlignment.Center, IsSnapToTickEnabled = true, TickFrequency = 5 };
@@ -672,7 +799,7 @@ public sealed class SettingsWindow : Window
         var line2 = Row(
             Btn("Wybierz dźwięk…", () =>
             {
-                var d = new Microsoft.Win32.OpenFileDialog { Title = "Dźwięk binda: " + b.Name, Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a" };
+                var d = new Microsoft.Win32.OpenFileDialog { Title = T("Dźwięk binda: {0}", b.Name), Filter = T("Dźwięki") + " (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a" };
                 if (d.ShowDialog(this) == true) Assign(d.FileName);
             }),
             file, Label("głośność", dim: true), vol, volText);
@@ -684,18 +811,18 @@ public sealed class SettingsWindow : Window
         if (_app.Binds.Failed.Contains(b.Id))
             box.Children.Add(new TextBlock
             {
-                Text = $"Skrót {b.KeyText} jest zajęty przez inny program — wybierz inny.",
+                Text = T("Skrót {0} jest zajęty przez inny program — wybierz inny.", b.KeyText),
                 Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
             });
         else if (b.Key != 0 && b.Enabled && _cfg.StopBind.Key == b.Key && _cfg.StopBind.Modifiers == b.Modifiers)
             box.Children.Add(new TextBlock
             {
-                Text = "Ten sam skrót ma klawisz „zatrzymaj wszystko”.", Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
+                Text = T("Ten sam skrót ma klawisz „zatrzymaj wszystko”."), Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
             });
         else if (_cfg.Binds.Any(o => o != b && o.Enabled && b.Enabled && o.Key == b.Key && o.Modifiers == b.Modifiers && b.Key != 0))
             box.Children.Add(new TextBlock
             {
-                Text = $"Ten sam skrót ma inny bind.", Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
+                Text = T("Ten sam skrót ma inny bind."), Foreground = Brushes.IndianRed, Margin = new Thickness(26, 2, 0, 0), FontSize = 12,
             });
 
         var card = Card_(box);
@@ -712,7 +839,7 @@ public sealed class SettingsWindow : Window
         CancelCapture();
         _capturing = b;
         _captureBtn = btn;
-        btn.Content = "Naciśnij skrót…  (Esc = anuluj, Backspace = usuń)";
+        btn.Content = T("Naciśnij skrót…  (Esc = anuluj, Backspace = usuń)");
         btn.Background = AccentB;
         btn.Foreground = Brushes.Black;
         _app.BindCapture = true;
@@ -778,6 +905,24 @@ public sealed class SettingsWindow : Window
         _favList = new StackPanel();
         p.Children.Add(Card_(_favList));
 
+        p.Children.Add(Header("Obserwowane kanały"));
+        p.Children.Add(Hint("Nakładka pokazuje pod Twoim kanałem małą listę osób z wybranych kanałów (np. „Lobby”), żebyś widział, kto czeka, choć siedzisz gdzie indziej."));
+        _watchList = new StackPanel();
+        p.Children.Add(Card_(_watchList));
+        var chCombo = new ComboBox { MinWidth = 240, IsEditable = true };
+        chCombo.DropDownOpened += (_, _) => chCombo.ItemsSource = _app.Ts.ChannelNames();
+        chCombo.ItemsSource = _app.Ts.ChannelNames();
+        p.Children.Add(Row(chCombo, Btn("+ Obserwuj kanał", () =>
+        {
+            var n = (chCombo.Text ?? "").Trim();
+            if (n == "" || _cfg.WatchedChannels.Any(w => w.Equals(n, StringComparison.CurrentCultureIgnoreCase))) return;
+            _cfg.WatchedChannels.Add(n);
+            Changed();
+            RebuildPeople();
+        })));
+        p.Children.Add(Check("Ukrywaj obserwowany kanał, gdy nikogo na nim nie ma", () => _cfg.WatchedHideEmpty, v => _cfg.WatchedHideEmpty = v));
+        p.Children.Add(Check("Powiadamiaj, gdy ktoś wchodzi na obserwowany kanał", () => _cfg.WatchedNotify, v => _cfg.WatchedNotify = v));
+
         p.Children.Add(Header("Ignorowani"));
         _ignList = new StackPanel();
         p.Children.Add(Card_(_ignList));
@@ -785,8 +930,17 @@ public sealed class SettingsWindow : Window
         return Scroll(p);
     }
 
+    StackPanel? _watchList;
+
     void RebuildPeople()
     {
+        if (_watchList != null)
+        {
+            _watchList.Children.Clear();
+            if (_cfg.WatchedChannels.Count == 0) _watchList.Children.Add(Hint(T("Nie obserwujesz żadnego kanału.")));
+            foreach (var w in _cfg.WatchedChannels.ToList())
+                _watchList.Children.Add(Row(Label("👁 " + w, 260), Btn("Usuń", () => { _cfg.WatchedChannels.Remove(w); Changed(); RebuildPeople(); })));
+        }
         if (_peopleOnline == null) return;
         _peopleOnline.Children.Clear();
         var all = _app.Ts?.AllClients() ?? new();
@@ -830,11 +984,11 @@ public sealed class SettingsWindow : Window
                 f.Color = $"#FF{dlg.Color.R:X2}{dlg.Color.G:X2}{dlg.Color.B:X2}";
                 RebuildPeople(); Changed();
             };
-            string soundLabel = f.SoundPath == "" ? "Dźwięk: wbudowany" : "Dźwięk: " + System.IO.Path.GetFileName(f.SoundPath);
+            string soundLabel = f.SoundPath == "" ? T("Dźwięk: wbudowany") : T("Dźwięk: {0}", System.IO.Path.GetFileName(f.SoundPath));
             _favList.Children.Add(Row(Label("★ " + f.Nickname, 200), swatch,
                 Btn(soundLabel, () =>
                 {
-                    var d = new Microsoft.Win32.OpenFileDialog { Filter = "Dźwięki (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a", Title = $"Dźwięk wejścia: {f.Nickname}" };
+                    var d = new Microsoft.Win32.OpenFileDialog { Filter = T("Dźwięki") + " (*.wav;*.mp3;*.wma;*.aiff;*.m4a)|*.wav;*.mp3;*.wma;*.aiff;*.m4a", Title = T("Dźwięk wejścia: {0}", f.Nickname) };
                     if (d.ShowDialog(this) != true) return;
                     try
                     {
@@ -844,7 +998,7 @@ public sealed class SettingsWindow : Window
                         RebuildPeople(); Changed();
                         Sounds.Play(SoundKind.Favorite, path);
                     }
-                    catch (Exception ex) { Info("Nie udało się wczytać dźwięku: " + ex.Message); }
+                    catch (Exception ex) { Info(T("Nie udało się wczytać dźwięku: {0}", ex.Message)); }
                 }),
                 Btn("▶", () => Sounds.Play(SoundKind.Favorite, f.SoundPath)),
                 Btn("Wbudowany", () => { Sounds.TryDelete(f.SoundPath); f.SoundPath = ""; RebuildPeople(); Changed(); }),
@@ -908,12 +1062,32 @@ public sealed class SettingsWindow : Window
     {
         var p = Page();
         p.Children.Add(Header("Wersja"));
-        p.Children.Add(Label($"Wersja programu: {Updater.Current}"));
+        p.Children.Add(Label(T("Wersja programu: {0}", Updater.Current)));
         p.Children.Add(Check("Sprawdzaj aktualizacje przy starcie", () => _cfg.AutoUpdateCheck, v => _cfg.AutoUpdateCheck = v));
         _updStatus = Hint("");
         p.Children.Add(Row(Btn("Sprawdź teraz", CheckNow, primary: true),
             Btn("Strona wydań", () => Process.Start(new ProcessStartInfo(Updater.ReleasesPage) { UseShellExecute = true }))));
         p.Children.Add(_updStatus);
+
+        p.Children.Add(Header("Kopia ustawień"));
+        p.Children.Add(Hint("Jeden plik z wszystkimi ustawieniami: motywy, dźwięki, bindy, ulubieni, profile gier. Przydaje się przy zmianie komputera. " +
+                            "Zgody TeamSpeaka nie da się przenieść — na nowym komputerze kliknij „Zezwól” jeszcze raz."));
+        p.Children.Add(Row(
+            Btn("Eksportuj ustawienia…", () =>
+            {
+                var d = new Microsoft.Win32.SaveFileDialog { Filter = T("Kopia TS6 Overlay") + " (*.ts6backup)|*.ts6backup", FileName = $"TS6Overlay-{DateTime.Now:yyyy-MM-dd}{Backup.Extension}" };
+                if (d.ShowDialog(this) != true) return;
+                try { _app.ExportBackup(d.FileName); Info(T("Zapisano kopię ustawień.")); }
+                catch (Exception ex) { Info(T("Nie udało się zapisać: {0}", ex.Message)); }
+            }),
+            Btn("Importuj ustawienia…", () =>
+            {
+                var d = new Microsoft.Win32.OpenFileDialog { Filter = T("Kopia TS6 Overlay") + " (*.ts6backup)|*.ts6backup" };
+                if (d.ShowDialog(this) != true) return;
+                if (!Confirm(T("Wczytać ustawienia z kopii? Obecne ustawienia zostaną zastąpione, a program uruchomi się ponownie."))) return;
+                try { _app.ImportBackup(d.FileName); }
+                catch (Exception ex) { Info(T("Nie udało się wczytać kopii: {0}", ex.Message)); }
+            })));
 
         p.Children.Add(Header("Instalacja"));
         _instStatus = Hint("");
@@ -938,22 +1112,22 @@ public sealed class SettingsWindow : Window
 
     void UpdateInstallStatus()
     {
-        _instStatus.Text = Installer.IsInstalledCopy ? $"Zainstalowany w {Installer.InstallDir}."
-            : Installer.IsInstalled ? $"Zainstalowana kopia jest w {Installer.InstallDir}, ale uruchomiona jest ta: {Environment.ProcessPath}"
-            : $"Nie zainstalowano — program działa z: {Environment.ProcessPath}";
+        _instStatus.Text = Installer.IsInstalledCopy ? T("Zainstalowany w {0}.", Installer.InstallDir)
+            : Installer.IsInstalled ? T("Zainstalowana kopia jest w {0}, ale uruchomiona jest ta: {1}", Installer.InstallDir, Environment.ProcessPath)
+            : T("Nie zainstalowano — program działa z: {0}", Environment.ProcessPath);
     }
 
     async void CheckNow()
     {
-        _updStatus.Text = "Sprawdzam…";
+        _updStatus.Text = T("Sprawdzam…");
         try
         {
             var r = await Updater.CheckAsync();
-            if (r == null) { _updStatus.Text = $"Masz najnowszą wersję ({Updater.Current})."; return; }
-            _updStatus.Text = $"Dostępna wersja {r.Version}.";
+            if (r == null) { _updStatus.Text = T("Masz najnowszą wersję ({0}).", Updater.Current); return; }
+            _updStatus.Text = T("Dostępna wersja {0}.", r.Version);
             await _app.AskAndUpdate(r);
         }
-        catch (Exception ex) { _updStatus.Text = "Nie udało się sprawdzić: " + ex.Message; }
+        catch (Exception ex) { _updStatus.Text = T("Nie udało się sprawdzić: {0}", ex.Message); }
     }
 
     // =====================================================================
@@ -970,9 +1144,9 @@ public sealed class SettingsWindow : Window
         if (_obsUrl != null)
         {
             _obsUrl.Text = $"http://localhost:{_cfg.ObsPort}/";
-            _obsStatus.Text = !_cfg.ObsEnabled ? "Wyłączone."
-                : _app.ObsRunning ? "Działa — wklej adres do OBS."
-                : "Nie udało się uruchomić: " + (_app.Obs.Error ?? "port zajęty?") + " Spróbuj innego portu.";
+            _obsStatus.Text = !_cfg.ObsEnabled ? T("Wyłączone.")
+                : _app.ObsRunning ? T("Działa — wklej adres do OBS.")
+                : T("Nie udało się uruchomić: {0} Spróbuj innego portu.", _app.Obs.Error ?? T("port zajęty?"));
         }
     }
 
@@ -980,7 +1154,7 @@ public sealed class SettingsWindow : Window
     // Budowanie interfejsu
     // =====================================================================
 
-    static TabItem Tab(string header, UIElement content) => new() { Header = header, Content = content };
+    static TabItem Tab(string header, UIElement content) => new() { Header = T(header), Content = content };
 
     static StackPanel Page() => new() { Margin = new Thickness(16, 8, 16, 16) };
 
@@ -988,18 +1162,18 @@ public sealed class SettingsWindow : Window
 
     TextBlock Header(string text) => new()
     {
-        Text = text, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = AccentB, Margin = new Thickness(0, 16, 0, 6),
+        Text = T(text), FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = AccentB, Margin = new Thickness(0, 16, 0, 6),
     };
 
     TextBlock Label(string text, double width = double.NaN, bool dim = false) => new()
     {
-        Text = text, Width = width, Foreground = dim ? Dim : Fg, VerticalAlignment = VerticalAlignment.Center,
+        Text = T(text), Width = width, Foreground = dim ? Dim : Fg, VerticalAlignment = VerticalAlignment.Center,
         Margin = new Thickness(0, 0, 8, 0), TextTrimming = TextTrimming.CharacterEllipsis,
     };
 
     TextBlock Hint(string text) => new()
     {
-        Text = text, Foreground = Dim, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4),
+        Text = T(text), Foreground = Dim, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4),
     };
 
     static WrapPanel Row(params UIElement[] items)
@@ -1017,7 +1191,7 @@ public sealed class SettingsWindow : Window
 
     Button Btn(string text, Action click, bool primary = false)
     {
-        var b = new Button { Content = text, Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 0), MinHeight = 26 };
+        var b = new Button { Content = T(text), Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 8, 0), MinHeight = 26 };
         if (primary) { b.Background = AccentB; b.Foreground = Brushes.Black; b.FontWeight = FontWeights.SemiBold; }
         b.Click += (_, _) => click();
         return b;
@@ -1031,7 +1205,7 @@ public sealed class SettingsWindow : Window
 
     CheckBox Check(string text, Func<bool> get, Action<bool> set)
     {
-        var cb = new CheckBox { Content = text, IsChecked = get(), Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
+        var cb = new CheckBox { Content = T(text), IsChecked = get(), Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
         cb.Checked += (_, _) => { set(true); Changed(); };
         cb.Unchecked += (_, _) => { set(false); Changed(); };
         return cb;
@@ -1039,7 +1213,7 @@ public sealed class SettingsWindow : Window
 
     CheckBox RawCheck(string text, Action<bool> set)
     {
-        var cb = new CheckBox { Content = text, Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
+        var cb = new CheckBox { Content = T(text), Foreground = Fg, Margin = new Thickness(0, 4, 0, 4) };
         cb.Checked += (_, _) => set(true);
         cb.Unchecked += (_, _) => set(false);
         return cb;
@@ -1063,8 +1237,8 @@ public sealed class SettingsWindow : Window
         return new DrawingBrush(g) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 20, 20), ViewportUnits = BrushMappingMode.Absolute };
     }
 
-    void Info(string text) => MessageBox.Show(this, text, "TS6 Overlay");
-    bool Confirm(string text) => MessageBox.Show(this, text, "TS6 Overlay", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+    void Info(string text) => MessageBox.Show(this, T(text), "TS6 Overlay");
+    bool Confirm(string text) => MessageBox.Show(this, T(text), "TS6 Overlay", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
     /// <summary>Ciemne style kontrolek WPF (karty, przyciski, listy rozwijane).</summary>
     ResourceDictionary Styles()

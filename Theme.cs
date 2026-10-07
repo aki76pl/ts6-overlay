@@ -164,7 +164,7 @@ public sealed record Theme
 
     public void SaveCustom()
     {
-        if (IsBuiltin) throw new InvalidOperationException("Nie można nadpisać wbudowanego motywu — nadaj inną nazwę.");
+        if (IsBuiltin) throw new InvalidOperationException(L.T("Nie można nadpisać wbudowanego motywu — nadaj inną nazwę."));
         Directory.CreateDirectory(Config.ThemesDir);
         File.WriteAllText(FileFor(Name), JsonSerializer.Serialize(this, Json));
         LoadCustom();
@@ -181,8 +181,8 @@ public sealed record Theme
     /// <summary>Wczytuje motyw z pliku od znajomego; przy kolizji nazwy dopisuje „(2)”.</summary>
     public static Theme Import(string path)
     {
-        var t = JsonSerializer.Deserialize<Theme>(File.ReadAllText(path)) ?? throw new InvalidDataException("Pusty plik motywu.");
-        if (!t.IsValid()) throw new InvalidDataException("Plik motywu ma niepoprawne kolory.");
+        var t = JsonSerializer.Deserialize<Theme>(File.ReadAllText(path)) ?? throw new InvalidDataException(L.T("Pusty plik motywu."));
+        if (!t.IsValid()) throw new InvalidDataException(L.T("Plik motywu ma niepoprawne kolory."));
         string baseName = string.IsNullOrWhiteSpace(t.Name) ? Path.GetFileNameWithoutExtension(path) : t.Name;
         string name = baseName;
         for (int i = 2; All.Any(x => x.Name == name); i++) name = $"{baseName} ({i})";

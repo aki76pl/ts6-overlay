@@ -28,6 +28,14 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 | **Motywy** | 8 wbudowanych motywów (domyślny Terminal) i edytor do tworzenia własnych; motywy wymieniasz ze znajomymi w plikach `.ts6theme` |
 | **OBS** | ta sama nakładka jako strona `http://localhost:5898/` dla źródła „Przeglądarka”; działa też w grach pełnoekranowych |
 | **Statystyki sesji** | kto ile mówił, ile razy wchodził, historia zdarzeń, eksport do CSV |
+| **Lektor** | czyta powiadomienia na głos (wejścia, wiadomości, szturchnięcia, znajomi); słychać go także w grach z wyłącznym pełnym ekranem |
+| **Klawisze podglądu** | przytrzymaj klawisz: pełna lista osób na serwerze albo ostatnie 10 wiadomości; po puszczeniu wszystko wraca |
+| **Profile gier** | osobna pozycja, rozmiar, przezroczystość i motyw dla każdej gry; program przełącza je sam |
+| **Znajomy online** | powiadomienie, gdy ulubiony wchodzi na serwer (opcjonalnie też, gdy wychodzi) |
+| **Obserwowane kanały** | mała lista osób z wybranych kanałów (np. „Lobby”) pod Twoim kanałem, z opcjonalnym powiadomieniem |
+| **Kilka serwerów** | gdy TeamSpeak jest połączony z kilkoma serwerami, nakładka pokazuje je wszystkie |
+| **Kopia ustawień** | eksport i import wszystkiego (motywy, dźwięki, bindy, ulubieni, profile) w jednym pliku `.ts6backup` |
+| **English** | interfejs po polsku lub angielsku (domyślnie według języka Windows) |
 | **Nazwy kanałów** | usuwa znaczniki `[spacer]` i ozdobniki, np. `[spacer]╟-● Pluton 9` → `Pluton 9` |
 
 ## Obsługa
@@ -36,6 +44,16 @@ Program sam sprawdza aktualizacje i instaluje je jednym kliknięciem. Odinstaluj
 - **Ctrl+Shift+O**: pokaż lub ukryj nakładkę.
 - **Ikona w zasobniku**: dwuklik otwiera ustawienia, prawy przycisk otwiera szybkie menu (motyw, dźwięki, tryby, statystyki).
 - Ponowne uruchomienie programu, np. ze skrótu w menu Start, otwiera ustawienia.
+
+### Lektor i klawisze podglądu
+
+Lektora włączysz w **Ustawieniach → Powiadomienia**: wybierasz, co ma czytać, głos (np. Paulina albo Zira), tempo i głośność. Opcja „Czytaj tylko, gdy gra jest na pierwszym planie” wycisza go poza grami.
+
+Klawisze podglądu ustawisz w **Ustawieniach → Bindy**. Trzeba je **przytrzymać**: nakładka pokazuje wtedy cały serwer albo ostatnie wiadomości, nawet jeśli była ukryta.
+
+### Profile gier
+
+W **Ustawieniach → Zachowanie → Profile gier** wybierz grę i kliknij **+ Dodaj profil**. Gdy gra jest na pierwszym planie, nakładka przyjmuje pozycję, rozmiar, przezroczystość i motyw z profilu. Przesunięcie nakładki (Ctrl + mysz) w trakcie gry zapisuje pozycję w profilu tej gry.
 
 ### Własne dźwięki
 

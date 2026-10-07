@@ -50,23 +50,30 @@ public sealed class ObsServer : IDisposable
     /// <summary>Wywoływane z wątku UI przy każdej zmianie.</summary>
     public void Update(OverlayState s, Theme t, Config cfg)
     {
-        var members = s.Members.Select(m => new
+        object Member(ClientInfo m, int myId) => new
         {
             nick = m.Nickname,
             talking = m.Talking,
             whisper = m.Whisper,
-            me = m.Id == s.MyId,
+            me = m.Id == myId,
             muted = m.InputMuted,
             deaf = m.OutputMuted,
             color = cfg.FavoriteFor(m.Uid)?.Color,
+        };
+        var servers = s.Servers.Select(v => new
+        {
+            server = v.Server,
+            channel = v.Channel,
+            members = v.Members.Select(m => Member(m, v.MyId)),
+            watched = v.Watched.Select(w => new { name = w.Name, members = w.Members.Select(m => Member(m, 0)) }),
         });
         object[] notices;
         lock (_notices) notices = _notices.ToArray();
         _stateJson = JsonSerializer.Serialize(new
         {
-            connected = s.Channel != null,
-            channel = s.Channel ?? "",
-            members,
+            connected = s.Servers.Count > 0,
+            servers,
+            texts = new { disconnected = L.T("TeamSpeak: brak połączenia"), me = L.T(" (ty)") },
             notices,
             noticeSeconds = cfg.EventSeconds,
             messageSeconds = cfg.MessageSeconds,
@@ -166,20 +173,28 @@ async function tick() {
     root.className = s.square ? 'sq' : '';
     const shadow = s.shadow ? 'text-shadow:0 1px 4px #000;' : '';
     let h = '';
-    if (!s.connected) h = '<div class="hdr" style="color:' + t.Header + '">TeamSpeak: brak połączenia</div>';
-    else {
-      h += '<div class="hdr" style="color:' + t.Header + ';' + shadow + '">🔊 ' + esc(s.channel) + '</div>';
-      for (const m of s.members) {
-        if (onlyTalking && !m.talking) continue;
+    const row = (m, small) => {
         const dc = m.talking ? (m.whisper ? t.Whisper : t.Talk) : t.Idle;
         const glow = m.talking && s.glow ? 'box-shadow:0 0 8px ' + dc + ';' : '';
         const nc = m.color || (m.talking ? t.TextTalking : t.Text);
-        h += '<div class="row" style="background:' + (m.talking ? t.TalkRow : 'transparent') + '">'
+        return '<div class="row" style="background:' + (m.talking ? t.TalkRow : 'transparent') + (small ? ';font-size:12px' : '') + '">'
           + '<span class="dot" style="background:' + dc + ';' + glow + '"></span>'
-          + '<span style="color:' + nc + ';font-weight:' + (m.talking ? 700 : 400) + ';' + shadow + '">' + esc(m.nick) + (m.me ? ' (ty)' : '') + '</span>'
+          + '<span style="color:' + nc + ';font-weight:' + (m.talking ? 700 : 400) + ';' + shadow + '">' + (m.color ? '★ ' : '') + esc(m.nick) + (m.me ? s.texts.me : '') + '</span>'
           + (m.muted ? '<span class="ic" style="color:' + t.Muted + '">🎙✕</span>' : '')
           + (m.deaf ? '<span class="ic" style="color:' + t.Muted + '">🔇</span>' : '')
           + '</div>';
+    };
+    if (!s.connected) h = '<div class="hdr" style="color:' + t.Header + '">' + esc(s.texts.disconnected) + '</div>';
+    else {
+      const multi = s.servers.length > 1;
+      for (const v of s.servers) {
+        if (multi) h += '<div class="hdr" style="color:' + t.Header + ';opacity:.75;font-size:11px;margin-top:6px">🖧 ' + esc(v.server) + '</div>';
+        h += '<div class="hdr" style="color:' + t.Header + ';' + shadow + '">🔊 ' + esc(v.channel) + '</div>';
+        for (const m of v.members) if (!onlyTalking || m.talking) h += row(m, false);
+        for (const w of v.watched) {
+          h += '<div class="hdr" style="color:' + t.Header + ';font-size:11px;margin-top:6px">👁 ' + esc(w.name) + ' (' + w.members.length + ')</div>';
+          for (const m of w.members) if (!onlyTalking || m.talking) h += row(m, true);
+        }
       }
       if (showNotices) {
         const now = Date.now();
@@ -187,7 +202,7 @@ async function tick() {
           const life = ((n.kind === 'Message' || n.kind === 'Poke') ? s.messageSeconds : s.noticeSeconds) * 1000;
           const age = now - n.at;
           if (age > life + 600) continue;
-          const bg = {Join: t.Join, Leave: t.Leave, Message: t.Message, Poke: t.Poke}[n.kind] || t.Info;
+          const bg = {Join: t.Join, Leave: t.Leave, Message: t.Message, Poke: t.Poke, Friend: t.Join}[n.kind] || t.Info;
           const pre = {Join: '➜ ', Leave: '← ', Message: '✉ ', Poke: '👉 '}[n.kind] || '• ';
           h += '<div class="n' + (age > life ? ' gone' : '') + '" style="background:' + bg + ';color:' + t.NoticeText + '">' + pre + esc(n.text) + '</div>';
         }

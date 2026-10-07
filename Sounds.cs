@@ -38,10 +38,10 @@ public static class Sounds
     public static (string path, TimeSpan length) Import(string source, string key)
     {
         string ext = Path.GetExtension(source).ToLowerInvariant();
-        if (!Extensions.Contains(ext)) throw new InvalidDataException("Obsługiwane formaty: " + string.Join(", ", Extensions));
+        if (!Extensions.Contains(ext)) throw new InvalidDataException(L.T("Obsługiwane formaty: {0}", string.Join(", ", Extensions)));
         TimeSpan len;
         using (var test = new AudioFileReader(source)) len = test.TotalTime;
-        if (len <= TimeSpan.Zero) throw new InvalidDataException("Plik nie zawiera dźwięku.");
+        if (len <= TimeSpan.Zero) throw new InvalidDataException(L.T("Plik nie zawiera dźwięku."));
 
         Directory.CreateDirectory(Dir);
         string safe = string.Concat(key.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
