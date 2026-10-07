@@ -1063,6 +1063,7 @@ public sealed class SettingsWindow : Window
         var p = Page();
         p.Children.Add(Header("Wersja"));
         p.Children.Add(Label(T("Wersja programu: {0}", Updater.Current)));
+        p.Children.Add(Label(T("Autor: {0}", "AKI76PL") + "  ·  © 2026 AKI76PL  ·  " + T("licencja MIT"), dim: true));
         p.Children.Add(Check("Sprawdzaj aktualizacje przy starcie", () => _cfg.AutoUpdateCheck, v => _cfg.AutoUpdateCheck = v));
         _updStatus = Hint("");
         p.Children.Add(Row(Btn("Sprawdź teraz", CheckNow, primary: true),

@@ -52,7 +52,7 @@ public static class Installer
         {
             k.SetValue("DisplayName", "TS6 Overlay");
             k.SetValue("DisplayVersion", Updater.Current.ToString());
-            k.SetValue("Publisher", "TS6 Overlay");
+            k.SetValue("Publisher", "AKI76PL");
             k.SetValue("DisplayIcon", InstalledExe);
             k.SetValue("InstallLocation", InstallDir);
             k.SetValue("UninstallString", "\"" + InstalledExe + "\" --uninstall");
@@ -89,6 +89,7 @@ public static class Installer
         {
             using var k = Registry.CurrentUser.OpenSubKey(UninstallKey, true);
             k?.SetValue("DisplayVersion", Updater.Current.ToString());
+            k?.SetValue("Publisher", "AKI76PL");
         }
         catch { }
     }

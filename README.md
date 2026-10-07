@@ -90,6 +90,8 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 Plik `publish\TS6Overlay.exe` działa bez instalowania .NET.
 
-## Licencja
+## Autor i licencja
 
-MIT
+Autor: **AKI76PL**
+
+© 2026 AKI76PL. Program jest udostępniony na licencji MIT (szczegóły w pliku [LICENSE](LICENSE)).

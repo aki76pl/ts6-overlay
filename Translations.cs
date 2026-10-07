@@ -344,6 +344,8 @@ public static class Translations
         ["Pobrany plik jest uszkodzony."] = "The downloaded file is damaged.",
         ["Podgląd serwera"] = "Server peek",
         ["— brak —"] = "— none —",
+        ["Autor: {0}"] = "Author: {0}",
+        ["licencja MIT"] = "MIT license",
         ["Podgląd wiadomości"] = "Messages peek",
     };
 }
