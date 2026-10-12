@@ -173,6 +173,14 @@ public sealed class OverlayView : StackPanel
             VerticalAlignment = VerticalAlignment.Center,
             Effect = TextShadow(),
         });
+        if (_cfg.WotShowInOverlay && App.WotFor(m) is { } wot)
+            row.Children.Add(new TextBlock
+            {
+                Text = $"{wot.WinRate:0}% · {WotStats.Short(wot.Battles)}",
+                Foreground = Theme.B(WotStats.WinRateColor(wot.WinRate)),
+                FontSize = small ? 10 : 11, FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(7, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center, Effect = TextShadow(),
+            });
         if (m.Recording)
             row.Children.Add(new TextBlock { Text = "⏺", Foreground = Brushes.Red, FontSize = small ? 11 : 13, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = T("nagrywa") });
         // Ikony Segoe MDL2 Assets: wyciszony mikrofon / wyciszone głośniki.

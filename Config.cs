@@ -52,6 +52,19 @@ public sealed class Config
     public bool SoundOnRecording { get; set; } = true;
     /// <summary>Sprawdzaj przy starcie, czy jest nowa wersja Aslain's WoT Modpack.</summary>
     public bool AslainNotify { get; set; } = false;
+    /// <summary>Data ważności aktywacji usług XVM (z modxvm.com); null = nie ustawiono.</summary>
+    public DateTime? XvmExpires { get; set; }
+    /// <summary>Ile dni przed wygaśnięciem przypominać.</summary>
+    public int XvmRemindDays { get; set; } = 3;
+    public DateTime XvmLastReminder { get; set; } = DateTime.MinValue;
+    /// <summary>Statystyki WoT osób z TS (API Wargaming).</summary>
+    public bool WotStatsEnabled { get; set; } = false;
+    public string WotAppId { get; set; } = "";
+    /// <summary>"eu", "na" albo "asia".</summary>
+    public string WotRegion { get; set; } = "eu";
+    public bool WotShowInOverlay { get; set; } = true;
+    /// <summary>Ręczne przypisanie: UID w TS → nick w WoT.</summary>
+    public Dictionary<string, string> WotNicks { get; set; } = new();
     public string AslainLastSeen { get; set; } = "";
     /// <summary>Pokazuj wszystkie serwery, z którymi połączony jest TS (nie tylko aktywny).</summary>
     public bool ShowAllServers { get; set; } = true;

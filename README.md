@@ -52,10 +52,10 @@ Jeśli przeglądarka (np. Edge lub Chrome) oznaczy plik jako „rzadko pobierany
 | **Obserwowane kanały** | mała lista osób z wybranych kanałów (np. „Lobby”) pod Twoim kanałem, z opcjonalnym powiadomieniem |
 | **Kilka serwerów** | gdy TeamSpeak jest połączony z kilkoma serwerami, nakładka pokazuje je wszystkie |
 | **Kopia ustawień** | eksport i import wszystkiego (motywy, dźwięki, bindy, ulubieni, profile) w jednym pliku `.ts6backup` |
-| **English** | interfejs po polsku lub angielsku (domyślnie według języka Windows) |
+| **Języki** | interfejs po polsku, angielsku lub niemiecku (domyślnie według języka Windows) |
 | **Flagi krajów** | flaga przy nicku każdej osoby (obrazki z flagcdn.com, zapisywane na dysku) |
 | **Ktoś nagrywa** | czerwony pasek „⏺ NAGRYWA: …”, powiadomienie, sygnał i opcjonalny błysk RGB, gdy ktoś na Twoim kanale nagrywa rozmowę |
-| **World of Tanks** | pobieranie aktualnego Aslain's WoT Modpack (z numerem wersji i powiadomieniem o nowej), instrukcja i przycisk aktywacji statystyk XVM |
+| **World of Tanks** | pobieranie aktualnego Aslain's WoT Modpack (z numerem wersji i powiadomieniem o nowej), aktywacja XVM z przypomnieniem przed wygaśnięciem, statystyki WoT osób z TS (procent zwycięstw, bitwy, obrażenia, rating WG) |
 | **Nazwy kanałów** | usuwa znaczniki `[spacer]` i ozdobniki, np. `[spacer]╟-● Pluton 9` → `Pluton 9` |
 
 ## Obsługa
@@ -103,6 +103,9 @@ W **Ustawieniach → World of Tanks**:
 
 - **Aslain's WoT Modpack**: program pokazuje aktualną wersję ze strony autora i pobiera instalator do folderu Pobrane. Instalację uruchamiasz sam przyciskiem **Uruchom instalator** (przed instalacją zamknij grę). Dostępny jest też nowy **Aslain's Mod Manager**. Opcjonalnie program powiadomi Cię o nowej wersji modpacka.
 - **XVM**: statystyki graczy w bitwie działają po aktywacji na [modxvm.com](https://modxvm.com/en/). Kliknij „Login” i zaloguj się kontem Wargaming, potem „Activate Services”, a na koniec wejdź do gry tym samym kontem. Aktywację przedłużasz za darmo tym samym przyciskiem.
+
+- **Przypomnienie o XVM**: wpisz datę ważności aktywacji widoczną na modxvm.com, a program przypomni o odnowieniu kilka dni wcześniej.
+- **Statystyki WoT osób z TS**: przy nicku pokazuje się procent zwycięstw i liczba bitew (kolory jak w XVM), a w panelu na telefonie także średnie obrażenia i rating WG. Potrzebny jest darmowy **Application ID** z [Wargaming Developer Room](https://developers.wargaming.net/applications/) („Add application”, typ bez ograniczenia IP, np. „Mobile”). Program szuka gracza po nicku z TS. Jeśli nick w grze jest inny, przypiszesz go ręcznie.
 
 Instaluj tylko mody dozwolone przez Wargaming. Lista zakazanych modów jest w zasadach Fair Play.
 

@@ -147,10 +147,11 @@ public sealed class SettingsWindow : Window
         lang.Items.Add(T("Automatycznie (jak Windows)"));
         lang.Items.Add("Polski");
         lang.Items.Add("English");
-        lang.SelectedIndex = _cfg.Language switch { "pl" => 1, "en" => 2, _ => 0 };
+        lang.Items.Add("Deutsch");
+        lang.SelectedIndex = _cfg.Language switch { "pl" => 1, "en" => 2, "de" => 3, _ => 0 };
         lang.SelectionChanged += (_, _) =>
         {
-            var v = lang.SelectedIndex switch { 1 => "pl", 2 => "en", _ => "" };
+            var v = lang.SelectedIndex switch { 1 => "pl", 2 => "en", 3 => "de", _ => "" };
             if (v == _cfg.Language) return;
             _cfg.Language = v;
             _cfg.Save();
@@ -1226,6 +1227,7 @@ public sealed class SettingsWindow : Window
     // =====================================================================
 
     TextBlock _aslainVer = null!, _aslainStatus = null!;
+    TextBlock? _wotStatus;
     ProgressBar _aslainProgress = null!;
     WotTools.AslainRelease? _aslain;
     string? _aslainFile;
@@ -1274,6 +1276,95 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Row(
             Btn("Otwórz XVM — logowanie i aktywacja", () => WotTools.Open(WotTools.XvmHome), primary: true),
             Btn("Instrukcja aktywacji (XVM)", () => WotTools.Open(WotTools.XvmServicesGuide))));
+
+        // przypomnienie o wygaśnięciu
+        p.Children.Add(Label("Przypomnienie o wygaśnięciu aktywacji XVM:"));
+        var date = new DatePicker { SelectedDate = _cfg.XvmExpires, Width = 160, Margin = new Thickness(0, 0, 8, 0) };
+        var xvmState = Hint("");
+        void ShowXvm()
+        {
+            xvmState.Text = _cfg.XvmExpires is not { } d ? T("Wpisz datę ważności widoczną na modxvm.com po aktywacji.")
+                : (d.Date - DateTime.Today).Days is var left && left < 0 ? T("Aktywacja wygasła {0:dd.MM.yyyy}.", d)
+                : T("Aktywacja ważna jeszcze {0} dni (do {1:dd.MM.yyyy}). Przypomnienie {2} dni wcześniej.", left, d, _cfg.XvmRemindDays);
+        }
+        date.SelectedDateChanged += (_, _) =>
+        {
+            _cfg.XvmExpires = date.SelectedDate;
+            _cfg.XvmLastReminder = DateTime.MinValue;
+            Changed();
+            ShowXvm();
+        };
+        p.Children.Add(Row(Label("Ważna do:", 90), date, Btn("Wyczyść", () => { date.SelectedDate = null; })));
+        p.Children.Add(SliderRow("Przypomnij na tyle dni wcześniej", 1, 14, () => _cfg.XvmRemindDays, v => { _cfg.XvmRemindDays = (int)v; ShowXvm(); }, v => $"{v:0}"));
+        ShowXvm();
+        p.Children.Add(xvmState);
+
+        // statystyki WoT znajomych
+        p.Children.Add(Header("Statystyki WoT osób z TeamSpeaka"));
+        p.Children.Add(Hint("Przy nicku w nakładce i w panelu na telefonie: procent zwycięstw i liczba bitew (kolory jak w XVM), na telefonie także średnie obrażenia i rating WG. " +
+                            "Dane z oficjalnego API Wargaming — potrzebny jest Twój darmowy Application ID."));
+        p.Children.Add(Check("Pobieraj statystyki WoT", () => _cfg.WotStatsEnabled, v => _cfg.WotStatsEnabled = v));
+        p.Children.Add(Check("Pokazuj je przy nickach w nakładce", () => _cfg.WotShowInOverlay, v => _cfg.WotShowInOverlay = v));
+        var wotId = Input(260);
+        wotId.Text = _cfg.WotAppId;
+        p.Children.Add(Row(Label("Application ID", 120), wotId, Btn("Zastosuj", () =>
+        {
+            var id = wotId.Text.Trim();
+            if (id != "" && !System.Text.RegularExpressions.Regex.IsMatch(id, "^[0-9a-fA-F]{32}$")) { Info(T("Application ID Wargaming to 32 znaki (cyfry i litery a–f).")); return; }
+            _cfg.WotAppId = id;
+            Changed();
+        }), Btn("Otwórz Wargaming Developer Room", () => WotTools.Open("https://developers.wargaming.net/applications/"))));
+        p.Children.Add(Hint("Jak zdobyć Application ID (jednorazowo):\n" +
+                            "1. Otwórz Wargaming Developer Room i zaloguj się kontem Wargaming.\n" +
+                            "2. Kliknij „Add application”, wpisz nazwę (np. „TS6 Overlay”) i wybierz typ aplikacji bez ograniczenia adresów IP (np. „Mobile”).\n" +
+                            "3. Skopiuj „ID” aplikacji (32 znaki), wklej powyżej i kliknij „Zastosuj”."));
+        var region = new ComboBox { MinWidth = 160 };
+        foreach (var r in new[] { "EU", "NA", "ASIA" }) region.Items.Add(r);
+        region.SelectedIndex = _cfg.WotRegion switch { "na" => 1, "asia" => 2, _ => 0 };
+        region.SelectionChanged += (_, _) => { _cfg.WotRegion = region.SelectedIndex switch { 1 => "na", 2 => "asia", _ => "eu" }; Changed(); };
+        p.Children.Add(Row(Label("Serwer gry", 120), region));
+        var testNick = Input(200);
+        var testResult = Hint("");
+        p.Children.Add(Row(Label("Sprawdź gracza", 120), testNick, Btn("Sprawdź", async () =>
+        {
+            if (!_app.Wot.Active) { testResult.Text = T("Najpierw włącz statystyki i podaj Application ID."); return; }
+            testResult.Text = T("Sprawdzam…");
+            try
+            {
+                var e = await _app.Wot.Lookup(testNick.Text);
+                testResult.Text = e == null ? T("Nie znaleziono gracza {0}.", testNick.Text.Trim())
+                    : T("{0}: bitwy {1}, zwycięstwa {2:0.0}%, śr. obrażenia {3}, rating WG {4}", e.Nickname, e.Battles, e.WinRate, e.AvgDamage, e.Rating);
+            }
+            catch (Exception ex) { testResult.Text = T("Błąd API Wargaming: {0}", ex.Message); }
+        })));
+        p.Children.Add(testResult);
+        p.Children.Add(Label("Nick w grze, jeśli jest inny niż w TS:"));
+        var map = new StackPanel();
+        p.Children.Add(Card_(map));
+        void BuildMap()
+        {
+            map.Children.Clear();
+            var people = _app.Ts.AllClients();
+            if (people.Count == 0) { map.Children.Add(Hint(T("Nikogo poza Tobą nie widać — połącz się z serwerem TeamSpeak."))); return; }
+            foreach (var c in people)
+            {
+                var box = Input(200);
+                _cfg.WotNicks.TryGetValue(c.Uid, out var cur);
+                box.Text = cur ?? "";
+                box.ToolTip = T("Puste = nick z TS");
+                box.LostFocus += (_, _) =>
+                {
+                    var v = box.Text.Trim();
+                    if (v == "") _cfg.WotNicks.Remove(c.Uid); else _cfg.WotNicks[c.Uid] = v;
+                    Changed();
+                };
+                map.Children.Add(Row(Label(c.Nickname, 200), Label("→", 20, dim: true), box));
+            }
+        }
+        BuildMap();
+        p.Children.Add(Row(Btn("Odśwież listę osób", BuildMap)));
+        _wotStatus = Hint("");
+        p.Children.Add(_wotStatus);
 
         _ = LoadAslain();
         return Scroll(p);
@@ -1410,6 +1501,7 @@ public sealed class SettingsWindow : Window
 
     void TimerTick()
     {
+        if (_wotStatus != null) _wotStatus.Text = _app.Wot.Status;
         if (_phoneStatus != null)
             _phoneStatus.Text = !_cfg.PhoneEnabled ? "" : _app.Phone.Running ? T("Panel działa.") : T("Nie udało się uruchomić: {0} Spróbuj innego portu.", _app.Phone.Error ?? "");
         if (_discordStatus != null)

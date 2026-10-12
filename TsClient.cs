@@ -593,9 +593,10 @@ public sealed class TsClient
         if (who != null && who.Id != 0 && who.Id == c.MyClientId) return;   // własne wiadomości
         string text = BbCode.Replace(FirstStr(p, "message", "msg", "text", "content"), "").Trim();
         if (text == "") return;
-        // targetMode jak w TS3: 1 = prywatna, 2 = kanał, 3 = serwer
+        // targetMode: 1 lub 4 = prywatna (TS6 wysyła 4 z targetId adresata), 2 = kanał, 3 = serwer
         int mode = Int(p["targetMode"]);
         if (mode == 0) mode = Int(p["target_mode"]);
+        if (mode == 4) mode = 1;
         bool show = mode switch
         {
             1 => _cfg.ShowPrivateMessages,

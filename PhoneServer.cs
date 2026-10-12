@@ -160,7 +160,7 @@ public sealed class PhoneServer : IDisposable
         theme_color = "#0b0f0c",
     });
 
-    string Page() => PageTemplate.Replace("%LANG%", L.En ? "en" : "pl").Replace("%T%", JsonSerializer.Serialize(new
+    string Page() => PageTemplate.Replace("%LANG%", L.Lang).Replace("%T%", JsonSerializer.Serialize(new
     {
         title = "TS6 Overlay",
         binds = L.T("Bindy"),
@@ -228,7 +228,8 @@ function tab(v){ view = v; $('tS').className = v==='s'?'on':''; $('tM').classNam
 async function post(cmd, id){ try{ await fetch('api/' + cmd + '?k=' + encodeURIComponent(k) + (id ? '&id=' + encodeURIComponent(id) : ''), {method:'POST'}); if (navigator.vibrate) navigator.vibrate(30); }catch(e){} }
 const row = m => '<div class="row ' + (m.talking ? (m.whisper ? 'talk whisper' : 'talk') : '') + '"><span class="dot"></span>'
   + (m.country ? '<img src="https://flagcdn.com/20x15/' + m.country + '.png" width="18" height="13">' : '') + '<span>'
-  + (m.fav ? '★ ' : '') + esc(m.nick) + (m.recording ? ' <span class="muted">⏺</span>' : '') + (m.me ? T.me : '') + '</span>' + (m.muted ? '<span class="muted">🎙✕</span>' : '') + (m.deaf ? '<span class="muted">🔇</span>' : '') + '</div>';
+  + (m.fav ? '★ ' : '') + esc(m.nick) + (m.recording ? ' <span class="muted">⏺</span>' : '')
+  + (m.wot ? ' <span style="font-size:12px;color:' + m.wot.color.replace('#FF', '#') + '">' + m.wot.wr + '% · ' + m.wot.battles + ' · ' + m.wot.dmg + ' dmg · WG ' + m.wot.rating + '</span>' : '') + (m.me ? T.me : '') + '</span>' + (m.muted ? '<span class="muted">🎙✕</span>' : '') + (m.deaf ? '<span class="muted">🔇</span>' : '') + '</div>';
 async function tick(){
   try{
     const s = await (await fetch('api/state?k=' + encodeURIComponent(k), {cache:'no-store'})).json();

@@ -67,7 +67,7 @@ public sealed class Speech : IDisposable
         if (voice == "")
         {
             // Bez wybranego głosu: głos w języku interfejsu, jeśli jest.
-            var culture = L.En ? "en" : "pl";
+            var culture = L.Lang;
             voice = _synth.GetInstalledVoices().Where(v => v.Enabled)
                 .FirstOrDefault(v => v.VoiceInfo.Culture.TwoLetterISOLanguageName == culture)?.VoiceInfo.Name ?? "";
         }

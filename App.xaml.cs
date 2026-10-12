@@ -21,6 +21,11 @@ public partial class App : Application
     public DiscordPresence Discord { get; private set; } = null!;
     public PhoneServer Phone { get; private set; } = null!;
     public Rgb Lights { get; private set; } = null!;
+    public WotStats Wot { get; private set; } = null!;
+
+    /// <summary>Statystyki WoT osoby (dla widoku nakładki); null gdy wyłączone lub nieznane.</summary>
+    public static WotStats.Entry? WotFor(ClientInfo c) =>
+        Application.Current is App a && a.Wot != null ? a.Wot.Get(c) : null;
     volatile string _phoneJson = "{}";
     /// <summary>Profil gry, który jest teraz zastosowany (null = ustawienia główne).</summary>
     public GameProfile? ActiveProfile { get; private set; }
@@ -109,6 +114,11 @@ public partial class App : Application
         Voice = new Speech(Cfg);
         Discord = new DiscordPresence(Cfg);
         Lights = new Rgb(Cfg);
+        Wot = new WotStats(Cfg);
+        Wot.Updated += Refresh;
+        var wotTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        wotTimer.Tick += (_, _) => Wot.Pump();
+        wotTimer.Start();
         if (Cfg.PhoneKey == "") { Cfg.PhoneKey = NewPhoneKey(); Cfg.Save(); }
         Phone = new PhoneServer(() => _phoneJson, (cmd, arg) => Dispatcher.Invoke(() => OnPhoneCommand(cmd, arg)));
 
@@ -143,10 +153,11 @@ public partial class App : Application
             _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => Dispatcher.BeginInvoke(() => CheckForUpdates(false)));
         // Program często działa całymi dniami (start z Windows) — sprawdzaj też co 4 godziny.
         var updTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(4) };
-        updTimer.Tick += (_, _) => { if (Cfg.AutoUpdateCheck) CheckForUpdates(false); };
+        updTimer.Tick += (_, _) => { if (Cfg.AutoUpdateCheck) CheckForUpdates(false); CheckXvm(); };
         updTimer.Start();
         if (Cfg.AslainNotify)
             _ = Task.Delay(TimeSpan.FromSeconds(25)).ContinueWith(_ => Dispatcher.BeginInvoke(CheckAslain));
+        _ = Task.Delay(TimeSpan.FromSeconds(35)).ContinueWith(_ => Dispatcher.BeginInvoke(CheckXvm));
     }
 
     const string ShowSettingsEvent = "TS6Overlay.showSettings";
@@ -257,6 +268,7 @@ public partial class App : Application
         {
             nick = m.Nickname, talking = m.Talking, whisper = m.Whisper, me = m.Id == myId,
             muted = m.InputMuted, deaf = m.OutputMuted, country = Cfg.ShowFlags && m.Country.Length == 2 ? m.Country.ToLowerInvariant() : null, recording = m.Recording, fav = Cfg.FavoriteFor(m.Uid) != null,
+            wot = Wot.Get(m) is { } w ? new { wr = Math.Round(w.WinRate, 1), battles = w.Battles, dmg = w.AvgDamage, rating = w.Rating, color = WotStats.WinRateColor(w.WinRate) } : null,
         };
         var (_, tree) = Ts.ServerTree();
         return System.Text.Json.JsonSerializer.Serialize(new
@@ -575,6 +587,7 @@ public partial class App : Application
             if (DateTime.Now - Cfg.UpdateNotifiedAt < TimeSpan.FromDays(7)) return;
             Cfg.UpdateNotifiedAt = DateTime.Now;
             Cfg.Save();
+            _balloonAction = null;
             _tray.ShowBalloonTip(8000, T("TS6 Overlay — aktualizacja"),
                 T("Dostępna wersja {0}. Kliknij, aby zaktualizować.", r.Version), Forms.ToolTipIcon.Info);
         }
@@ -623,6 +636,25 @@ public partial class App : Application
 
     public void OpenWotTab() => OpenSettings(SettingsWindow.TabWot);
 
+    /// <summary>Przypomnienie o wygasającej aktywacji XVM — najwyżej raz dziennie.</summary>
+    void CheckXvm()
+    {
+        if (Cfg.XvmExpires is not { } exp || Cfg.XvmLastReminder.Date == DateTime.Today) return;
+        int days = (exp.Date - DateTime.Today).Days;
+        if (days > Cfg.XvmRemindDays) return;
+        Cfg.XvmLastReminder = DateTime.Today;
+        Cfg.Save();
+        string text = days < 0 ? T("Aktywacja usług XVM wygasła {0:dd.MM.yyyy}. Odnów ją na modxvm.com, żeby wróciły statystyki w bitwie.", exp)
+            : days == 0 ? T("Aktywacja usług XVM wygasa dzisiaj. Odnów ją na modxvm.com.")
+            : T("Aktywacja usług XVM wygasa za {0} dni ({1:dd.MM.yyyy}). Odnów ją na modxvm.com.", days, exp);
+        _balloonAction = () => WotTools.Open(WotTools.XvmHome);
+        _tray.ShowBalloonTip(15000, T("XVM — przypomnienie"), text, Forms.ToolTipIcon.Info);
+        _win.View.AddNotice(new(text, NoticeKind.Info));
+    }
+
+    /// <summary>Co zrobić po kliknięciu dymka (aktualizacja, XVM…).</summary>
+    Action? _balloonAction;
+
     // ---------- zasobnik ----------
 
     void SetStatus(string s)
@@ -643,7 +675,13 @@ public partial class App : Application
 
         _tray = new Forms.NotifyIcon { Icon = icon, Text = "TS6 Overlay", Visible = true, ContextMenuStrip = menu };
         _tray.DoubleClick += (_, _) => OpenSettings();
-        _tray.BalloonTipClicked += async (_, _) => { if (PendingUpdate != null) await AskAndUpdate(PendingUpdate); };
+        _tray.BalloonTipClicked += async (_, _) =>
+        {
+            var a = _balloonAction;
+            _balloonAction = null;
+            if (a != null) a();
+            else if (PendingUpdate != null) await AskAndUpdate(PendingUpdate);
+        };
     }
 
     /// <summary>Menu budowane przy każdym otwarciu — zawsze zgodne z oknem ustawień.</summary>
