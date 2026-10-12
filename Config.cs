@@ -185,6 +185,8 @@ public sealed class Config
     // --- aktualizacje ---
     public bool AutoUpdateCheck { get; set; } = true;
     public string SkippedVersion { get; set; } = "";
+    /// <summary>Kiedy ostatnio pokazano dymek o aktualizacji — kolejny najwcześniej po 7 dniach.</summary>
+    public DateTime UpdateNotifiedAt { get; set; } = DateTime.MinValue;
     public bool InstallPromptShown { get; set; } = false;
 
     public bool LogRawEvents { get; set; } = false;

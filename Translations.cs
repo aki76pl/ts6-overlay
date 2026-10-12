@@ -474,5 +474,6 @@ public static class Translations
         ["Pobrano do: {0}"] = "Downloaded to: {0}",
         ["Nie udało się pobrać: {0}"] = "Download failed: {0}",
         ["Nie udało się odczytać wersji ze strony Aslaina."] = "Could not read the version from Aslain's site.",
+        ["Sprawdzaj aktualizacje (przy starcie, przy uruchomieniu TeamSpeaka i co 4 godziny; przypomnienie najwyżej raz na 7 dni)"] = "Check for updates (at startup, when TeamSpeak starts and every 4 hours; reminder at most once every 7 days)",
     };
 }

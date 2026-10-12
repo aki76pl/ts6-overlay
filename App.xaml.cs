@@ -141,6 +141,10 @@ public partial class App : Application
             _tray.ShowBalloonTip(4000, "TS6 Overlay", T("Zaktualizowano do wersji {0}.", Updater.Current), Forms.ToolTipIcon.Info);
         if (Cfg.AutoUpdateCheck)
             _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => Dispatcher.BeginInvoke(() => CheckForUpdates(false)));
+        // Program często działa całymi dniami (start z Windows) — sprawdzaj też co 4 godziny.
+        var updTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(4) };
+        updTimer.Tick += (_, _) => { if (Cfg.AutoUpdateCheck) CheckForUpdates(false); };
+        updTimer.Start();
         if (Cfg.AslainNotify)
             _ = Task.Delay(TimeSpan.FromSeconds(25)).ContinueWith(_ => Dispatcher.BeginInvoke(CheckAslain));
     }
@@ -388,7 +392,12 @@ public partial class App : Application
         _win.KeepOnTop();
         CheckExclusiveFullscreen();
         bool running = IsTeamSpeakRunning();
-        if (running != _tsRunning) { _tsRunning = running; changed = true; }
+        if (running != _tsRunning)
+        {
+            _tsRunning = running;
+            changed = true;
+            if (running && Cfg.AutoUpdateCheck) CheckForUpdates(false);   // TeamSpeak właśnie wystartował
+        }
 
         bool? game = Cfg.GameOnly || Cfg.Profiles.Count > 0 ? GameDetector.IsGameInForeground(Cfg) : false;
         if (Cfg.GameOnly && game.HasValue && game.Value != _gameActive) { _gameActive = game.Value; changed = true; }
@@ -560,9 +569,13 @@ public partial class App : Application
                 if (interactive) MessageBox.Show(T("Masz najnowszą wersję ({0}).", Updater.Current), "TS6 Overlay");
                 return;
             }
-            if (!interactive && r.Tag == Cfg.SkippedVersion) return;
-            if (interactive) await AskAndUpdate(r);
-            else _tray.ShowBalloonTip(8000, T("TS6 Overlay — aktualizacja"),
+            if (interactive) { await AskAndUpdate(r); return; }
+            if (r.Tag == Cfg.SkippedVersion) return;
+            // Dymek najwyżej raz na 7 dni; pozycja „Zaktualizuj do…” w menu zasobnika jest widoczna cały czas.
+            if (DateTime.Now - Cfg.UpdateNotifiedAt < TimeSpan.FromDays(7)) return;
+            Cfg.UpdateNotifiedAt = DateTime.Now;
+            Cfg.Save();
+            _tray.ShowBalloonTip(8000, T("TS6 Overlay — aktualizacja"),
                 T("Dostępna wersja {0}. Kliknij, aby zaktualizować.", r.Version), Forms.ToolTipIcon.Info);
         }
         catch (Exception ex)
