@@ -15,7 +15,7 @@ namespace TS6Overlay;
 /// <summary>Okno ustawień: wszystkie opcje z podglądem nakładki na żywo. Zmiany zapisują się od razu.</summary>
 public sealed class SettingsWindow : Window
 {
-    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabPhone = 7, TabUpdates = 8;
+    public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabPhone = 7, TabWot = 8, TabUpdates = 9;
 
     readonly App _app;
     readonly Config _cfg;
@@ -55,6 +55,7 @@ public sealed class SettingsWindow : Window
         _tabs.Items.Add(Tab("Osoby", PeopleTab()));
         _tabs.Items.Add(Tab("OBS", ObsTab()));
         _tabs.Items.Add(Tab("Integracje", PhoneTab()));
+        _tabs.Items.Add(Tab("World of Tanks", WotTab()));
         _tabs.Items.Add(Tab("Aktualizacje i kopia", UpdatesTab()));
         _tabs.SelectionChanged += (_, e) =>
         {
@@ -164,6 +165,7 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Header("Zawartość"));
         p.Children.Add(Check("Pokazuj wszystkich na kanale (odznacz = tylko mówiący i powiadomienia)", () => _cfg.ShowChannelList, v => _cfg.ShowChannelList = v));
         p.Children.Add(Check("Pokazuj wszystkie serwery, z którymi połączony jest TeamSpeak (nie tylko aktywny)", () => _cfg.ShowAllServers, v => _cfg.ShowAllServers = v));
+        p.Children.Add(Check("Pokazuj flagi krajów przy nickach", () => _cfg.ShowFlags, v => _cfg.ShowFlags = v));
         p.Children.Add(SliderRow("Czas powiadomień wejścia/wyjścia", 2, 30, () => _cfg.EventSeconds, v => _cfg.EventSeconds = (int)v, v => $"{v:0} s"));
         p.Children.Add(SliderRow("Czas wiadomości i szturchnięć", 3, 60, () => _cfg.MessageSeconds, v => _cfg.MessageSeconds = (int)v, v => $"{v:0} s"));
 
@@ -561,6 +563,10 @@ public sealed class SettingsWindow : Window
         p.Children.Add(Row(Label("Głos", 100), voice, Btn("▶ Test", () => _app.Voice.Say(T("{0} wchodzi", "Kamil") + ". " + T("{0} pisze: {1}", "Ola", T("idziemy na B?"))))));
         p.Children.Add(SliderRow("Tempo mowy", -5, 8, () => _cfg.TtsRate, v => _cfg.TtsRate = (int)v, v => $"{v:+0;-0;0}"));
         p.Children.Add(SliderRow("Głośność lektora", 0, 100, () => _cfg.TtsVolume, v => _cfg.TtsVolume = (int)v, v => $"{v:0}%"));
+
+        p.Children.Add(Header("Nagrywanie rozmowy"));
+        p.Children.Add(Check("Ostrzegaj, gdy ktoś na moim kanale nagrywa rozmowę (czerwony pasek i powiadomienie)", () => _cfg.RecordingWarning, v => _cfg.RecordingWarning = v));
+        p.Children.Add(SoundRow("Sygnał dźwiękowy przy rozpoczęciu nagrywania", () => _cfg.SoundOnRecording, v => _cfg.SoundOnRecording = v, SoundKind.Recording));
 
         p.Children.Add(Header("Znajomi"));
         p.Children.Add(Check("Powiadamiaj, gdy ulubiony wchodzi na serwer („★ … jest online”)", () => _cfg.FriendOnline, v => _cfg.FriendOnline = v));
@@ -1118,7 +1124,7 @@ public sealed class SettingsWindow : Window
                             "Po błysku podświetlenie wraca do Twoich ustawień."));
         p.Children.Add(Check("Włącz błyski RGB", () => _cfg.RgbEnabled, v => { _cfg.RgbEnabled = v; if (v) _ = ProbeRgb(); }));
         foreach (var (kind, label) in new[] { ("Poke", "Szturchnięcie"), ("Friend", "Znajomy jest online"), ("Join", "Ktoś wchodzi na kanał"),
-                                              ("Message", "Wiadomość"), ("MuteWarning", "Mówisz do wyciszonego mikrofonu") })
+                                              ("Message", "Wiadomość"), ("MuteWarning", "Mówisz do wyciszonego mikrofonu"), ("Recording", "Ktoś nagrywa kanał") })
             p.Children.Add(RgbRow(kind, label));
         p.Children.Add(SliderRow("Liczba błysków", 1, 6, () => _cfg.RgbFlashes, v => _cfg.RgbFlashes = (int)v, v => $"{v:0}"));
         p.Children.Add(SliderRow("Długość błysku", 80, 500, () => _cfg.RgbFlashMs, v => _cfg.RgbFlashMs = (int)v, v => $"{v:0} ms"));
@@ -1213,6 +1219,108 @@ public sealed class SettingsWindow : Window
         bmp.EndInit();
         bmp.Freeze();
         return bmp;
+    }
+
+    // =====================================================================
+    // World of Tanks: Aslain i XVM
+    // =====================================================================
+
+    TextBlock _aslainVer = null!, _aslainStatus = null!;
+    ProgressBar _aslainProgress = null!;
+    WotTools.AslainRelease? _aslain;
+    string? _aslainFile;
+    Button _runInstaller = null!;
+
+    UIElement WotTab()
+    {
+        var p = Page();
+        p.Children.Add(Header("Aslain's WoT Modpack"));
+        p.Children.Add(Hint("Najpopularniejsza paczka modów do World of Tanks z instalatorem, w którym sam wybierasz mody. Program pobiera instalator ze strony autora, a instalację uruchamiasz Ty."));
+        _aslainVer = Label("Sprawdzam aktualną wersję…");
+        p.Children.Add(_aslainVer);
+        p.Children.Add(Row(
+            Btn("Pobierz modpack (instalator)", DownloadAslain, primary: true),
+            Btn("Pobierz Aslain's Mod Manager (nowa aplikacja)", () => DownloadAslainUrl(WotTools.ModManagerUrl)),
+            Btn("Sprawdź ponownie", () => _ = LoadAslain())));
+        _aslainProgress = new ProgressBar { Height = 10, Width = 380, Minimum = 0, Maximum = 1, Foreground = AccentB, Background = InputBg, BorderBrush = Line, Visibility = Visibility.Collapsed, Margin = new Thickness(0, 4, 0, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        p.Children.Add(_aslainProgress);
+        _aslainStatus = Hint("");
+        p.Children.Add(_aslainStatus);
+        _runInstaller = Btn("Uruchom instalator", () =>
+        {
+            if (_aslainFile == null) return;
+            if (!Confirm(T("Uruchomić instalator {0}? Przed instalacją zamknij World of Tanks.", System.IO.Path.GetFileName(_aslainFile)))) return;
+            try { Process.Start(new ProcessStartInfo(_aslainFile) { UseShellExecute = true }); }
+            catch (Exception ex) { Info(T("Nie udało się uruchomić: {0}", ex.Message)); }
+        }, primary: true);
+        _runInstaller.Visibility = Visibility.Collapsed;
+        var reveal = Btn("Pokaż w folderze Pobrane", () => { if (_aslainFile != null) WotTools.Reveal(_aslainFile); });
+        reveal.Visibility = Visibility.Collapsed;
+        _runInstaller.IsVisibleChanged += (_, _) => reveal.Visibility = _runInstaller.Visibility;
+        p.Children.Add(Row(_runInstaller, reveal));
+        p.Children.Add(Row(
+            Btn("Strona Aslaina (PL)", () => WotTools.Open(WotTools.AslainPagePl)),
+            Btn("WG Mod Hub", () => WotTools.Open(WotTools.WgModHub))));
+        p.Children.Add(Check("Powiadamiaj o nowej wersji modpacka (sprawdzanie przy starcie programu)", () => _cfg.AslainNotify, v => _cfg.AslainNotify = v));
+        p.Children.Add(Hint("Instaluj tylko mody dozwolone przez Wargaming. Aslain nie dołącza zakazanych modów, ale za mody z innych źródeł możesz dostać blokadę konta."));
+        p.Children.Add(Row(Btn("Lista zakazanych modów (Wargaming)", () => WotTools.Open(WotTools.FairPlay))));
+
+        p.Children.Add(Header("XVM — aktywacja statystyk"));
+        p.Children.Add(Hint("Statystyki graczy w bitwie (np. WN8, procent zwycięstw) i inne usługi sieciowe XVM działają dopiero po aktywacji na stronie XVM:\n" +
+                            "1. Otwórz stronę XVM i kliknij „Login” w prawym górnym rogu — zaloguj się kontem Wargaming.\n" +
+                            "2. W ustawieniach konta kliknij „Activate Services”.\n" +
+                            "3. Wejdź do gry tym samym kontem.\n" +
+                            "Aktywacja ma datę ważności — przedłużysz ją za darmo w każdej chwili tym samym przyciskiem."));
+        p.Children.Add(Row(
+            Btn("Otwórz XVM — logowanie i aktywacja", () => WotTools.Open(WotTools.XvmHome), primary: true),
+            Btn("Instrukcja aktywacji (XVM)", () => WotTools.Open(WotTools.XvmServicesGuide))));
+
+        _ = LoadAslain();
+        return Scroll(p);
+    }
+
+    async Task LoadAslain()
+    {
+        _aslainVer.Text = T("Sprawdzam aktualną wersję…");
+        try
+        {
+            _aslain = await WotTools.CheckAslainAsync();
+            _aslainVer.Text = T("Aktualna wersja: {0}", _aslain.Version);
+        }
+        catch (Exception ex)
+        {
+            _aslain = null;
+            _aslainVer.Text = T("Nie udało się sprawdzić wersji: {0}", ex.Message);
+        }
+    }
+
+    void DownloadAslain()
+    {
+        if (_aslain?.InstallerUrl is { } url) DownloadAslainUrl(url);
+        else
+        {
+            Info(T("Nie znalazłem bezpośredniego linku do instalatora — otwieram stronę Aslaina."));
+            WotTools.Open(WotTools.AslainPagePl);
+        }
+    }
+
+    async void DownloadAslainUrl(string url)
+    {
+        _aslainProgress.Visibility = Visibility.Visible;
+        _aslainProgress.Value = 0;
+        _runInstaller.Visibility = Visibility.Collapsed;
+        _aslainStatus.Text = T("Pobieranie: {0}", System.IO.Path.GetFileName(new Uri(url).LocalPath));
+        try
+        {
+            _aslainFile = await WotTools.DownloadAsync(url, new Progress<double>(v => _aslainProgress.Value = v));
+            _aslainStatus.Text = T("Pobrano do: {0}", _aslainFile);
+            _runInstaller.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            _aslainStatus.Text = T("Nie udało się pobrać: {0}", ex.Message);
+        }
+        finally { _aslainProgress.Visibility = Visibility.Collapsed; }
     }
 
     // =====================================================================

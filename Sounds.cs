@@ -4,7 +4,7 @@ using NAudio.Wave.SampleProviders;
 
 namespace TS6Overlay;
 
-public enum SoundKind { Join, Leave, Favorite, Message, Poke, MuteWarning }
+public enum SoundKind { Join, Leave, Favorite, Message, Poke, MuteWarning, Recording }
 
 /// <summary>
 /// Krótkie sygnały dźwiękowe z regulacją głośności. Domyślne dźwięki są generowane w pamięci.
@@ -73,7 +73,7 @@ public static class Sounds
                 string name = kind switch
                 {
                     SoundKind.Join => "join", SoundKind.Leave => "leave", SoundKind.Message => "message",
-                    SoundKind.Poke => "poke", SoundKind.Favorite => "favorite", _ => "mute",
+                    SoundKind.Poke => "poke", SoundKind.Favorite => "favorite", SoundKind.Recording => "recording", _ => "mute",
                 };
                 file = new[] { ".wav", ".mp3" }.Select(e => Path.Combine(Config.Dir, name + e)).FirstOrDefault(File.Exists);
             }
@@ -127,6 +127,7 @@ public static class Sounds
                 SoundKind.Favorite => Tones(0.09, 659.25, 830.61, 987.77),    // E5 → G#5 → B5
                 SoundKind.Message => Tones(0.14, 1046.5),                     // C6
                 SoundKind.Poke => Tones(0.07, 1318.5, 0, 1318.5),             // podwójne „ding”
+                SoundKind.Recording => Tones(0.12, 987.77, 0, 987.77, 0, 987.77), // trzy krótkie sygnały
                 _ => Tones(0.16, 220.0, 0, 220.0),                            // niskie ostrzeżenie
             };
             Cache[kind] = d;

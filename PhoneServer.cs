@@ -226,8 +226,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 let view = 's', lastBinds = '';
 function tab(v){ view = v; $('tS').className = v==='s'?'on':''; $('tM').className = v==='m'?'on':''; tick(); }
 async function post(cmd, id){ try{ await fetch('api/' + cmd + '?k=' + encodeURIComponent(k) + (id ? '&id=' + encodeURIComponent(id) : ''), {method:'POST'}); if (navigator.vibrate) navigator.vibrate(30); }catch(e){} }
-const row = m => '<div class="row ' + (m.talking ? (m.whisper ? 'talk whisper' : 'talk') : '') + '"><span class="dot"></span><span>'
-  + (m.fav ? '★ ' : '') + esc(m.nick) + (m.me ? T.me : '') + '</span>' + (m.muted ? '<span class="muted">🎙✕</span>' : '') + (m.deaf ? '<span class="muted">🔇</span>' : '') + '</div>';
+const row = m => '<div class="row ' + (m.talking ? (m.whisper ? 'talk whisper' : 'talk') : '') + '"><span class="dot"></span>'
+  + (m.country ? '<img src="https://flagcdn.com/20x15/' + m.country + '.png" width="18" height="13">' : '') + '<span>'
+  + (m.fav ? '★ ' : '') + esc(m.nick) + (m.recording ? ' <span class="muted">⏺</span>' : '') + (m.me ? T.me : '') + '</span>' + (m.muted ? '<span class="muted">🎙✕</span>' : '') + (m.deaf ? '<span class="muted">🔇</span>' : '') + '</div>';
 async function tick(){
   try{
     const s = await (await fetch('api/state?k=' + encodeURIComponent(k), {cache:'no-store'})).json();

@@ -45,6 +45,14 @@ public sealed class Config
     public string Theme { get; set; } = "Terminal";
     /// <summary>"pl", "en" albo "" = wg języka Windows.</summary>
     public string Language { get; set; } = "";
+    /// <summary>Flagi krajów przy nickach.</summary>
+    public bool ShowFlags { get; set; } = true;
+    /// <summary>Ostrzeżenie, gdy ktoś na Twoim kanale nagrywa.</summary>
+    public bool RecordingWarning { get; set; } = true;
+    public bool SoundOnRecording { get; set; } = true;
+    /// <summary>Sprawdzaj przy starcie, czy jest nowa wersja Aslain's WoT Modpack.</summary>
+    public bool AslainNotify { get; set; } = false;
+    public string AslainLastSeen { get; set; } = "";
     /// <summary>Pokazuj wszystkie serwery, z którymi połączony jest TS (nie tylko aktywny).</summary>
     public bool ShowAllServers { get; set; } = true;
 
@@ -159,6 +167,7 @@ public sealed class Config
         ["Join"] = "",
         ["Message"] = "",
         ["MuteWarning"] = "",
+        ["Recording"] = "#FFFF0000",
     };
     public int RgbFlashes { get; set; } = 3;
     public int RgbFlashMs { get; set; } = 180;

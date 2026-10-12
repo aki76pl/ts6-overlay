@@ -118,6 +118,8 @@ public sealed class OverlayView : StackPanel
             if (_content.Children.Count > 0 && multi) _content.Children.Add(new Border { Height = 6 });
             if (multi) _content.Children.Add(Header("🖧 " + (srv.Server != "" ? srv.Server : T("serwer")), small: true, dim: true));
             if (_hint == null || multi) _content.Children.Add(Header(("🔊 " + srv.Channel).TrimEnd()));
+            var recorders = srv.Members.Where(m => m.Recording && m.Id != srv.MyId).Select(m => m.Nickname).ToList();
+            if (recorders.Count > 0 && _cfg.RecordingWarning) _content.Children.Add(RecordingBadge(recorders));
             foreach (var r in rows) _content.Children.Add(r);
             _memberRows += rows.Count;
 
@@ -161,6 +163,7 @@ public sealed class OverlayView : StackPanel
         dot.Fill = Theme.B(dotColor);
         if (m.Talking && _t.Glow) dot.Effect = new DropShadowEffect { Color = Theme.C(dotColor), BlurRadius = 9, ShadowDepth = 0 };
         row.Children.Add(dot);
+        if (_cfg.ShowFlags && m.Country.Length == 2) row.Children.Add(Flag(m.Country, small));
         row.Children.Add(new TextBlock
         {
             Text = (fav != null ? "★ " : "") + m.Nickname + (isMe ? T(" (ty)") : ""),
@@ -170,6 +173,8 @@ public sealed class OverlayView : StackPanel
             VerticalAlignment = VerticalAlignment.Center,
             Effect = TextShadow(),
         });
+        if (m.Recording)
+            row.Children.Add(new TextBlock { Text = "⏺", Foreground = Brushes.Red, FontSize = small ? 11 : 13, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = T("nagrywa") });
         // Ikony Segoe MDL2 Assets: wyciszony mikrofon / wyciszone głośniki.
         if (m.InputMuted) row.Children.Add(MuteIcon(""));
         if (m.OutputMuted) row.Children.Add(MuteIcon(""));
@@ -182,6 +187,37 @@ public sealed class OverlayView : StackPanel
             Background = m.Talking ? Theme.B(_t.TalkRow) : Brushes.Transparent,
         };
     }
+
+    /// <summary>Flaga kraju (obrazek) albo kod tekstem, gdy obrazka jeszcze nie ma.</summary>
+    UIElement Flag(string code, bool small)
+    {
+        var img = Flags.Get(code);
+        if (img != null)
+            return new System.Windows.Controls.Image
+            {
+                Source = img, Width = small ? 14 : 18, Height = small ? 10 : 13, Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center, ToolTip = code,
+            };
+        return new TextBlock
+        {
+            Text = code, FontSize = small ? 9 : 10, FontWeight = FontWeights.Bold, Opacity = 0.8, Margin = new Thickness(0, 0, 6, 0),
+            Foreground = Theme.B(_t.Text), VerticalAlignment = VerticalAlignment.Center,
+        };
+    }
+
+    /// <summary>Czerwony pasek „nagrywa” pod nazwą kanału — widoczny przez cały czas nagrywania.</summary>
+    UIElement RecordingBadge(List<string> who) => new Border
+    {
+        Background = Theme.B(_t.Banner),
+        CornerRadius = new CornerRadius(Math.Min(_t.Radius, 4)),
+        Padding = new Thickness(6, 2, 6, 2),
+        Margin = new Thickness(0, 0, 0, 4),
+        Child = new TextBlock
+        {
+            Text = "⏺ " + T("NAGRYWA: {0}", string.Join(", ", who)),
+            Foreground = Brushes.White, FontWeight = FontWeights.Bold, FontSize = 12, TextWrapping = TextWrapping.Wrap,
+        },
+    };
 
     static Brush SafeBrush(string hex, string fallback)
     {
@@ -208,6 +244,7 @@ public sealed class OverlayView : StackPanel
         NoticeKind.Poke => (_t.Poke, "👉 "),
         NoticeKind.Friend => (_t.Join, ""),
         NoticeKind.Watched => (_t.Info, ""),
+        NoticeKind.Recording => (_t.Banner, ""),
         _ => (_t.Info, "• "),
     };
 
@@ -243,7 +280,7 @@ public sealed class OverlayView : StackPanel
         UpdatePanelBackground();
         if (persistent) return;
 
-        int secs = n.Kind is NoticeKind.Message or NoticeKind.Poke ? _cfg.MessageSeconds : _cfg.EventSeconds;
+        int secs = n.Kind is NoticeKind.Message or NoticeKind.Poke or NoticeKind.Recording ? _cfg.MessageSeconds : _cfg.EventSeconds;
         var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(600)) { BeginTime = TimeSpan.FromSeconds(Math.Max(1, secs)) };
         fade.Completed += (_, _) => { _notices.Children.Remove(b); UpdatePanelBackground(); };
         b.BeginAnimation(OpacityProperty, fade);
@@ -403,10 +440,10 @@ public sealed class OverlayView : StackPanel
     {
         new(1, "serwer", "Pluton 9", new()
         {
-            new() { Id = 1, Nickname = "AKI76PL", Talking = true },
-            new() { Id = 2, Nickname = "Kamil", Talking = true, Whisper = true },
-            new() { Id = 3, Nickname = "Ola", Uid = cfg.Favorites.FirstOrDefault()?.Uid ?? "" },
-            new() { Id = 4, Nickname = "Marek", InputMuted = true, OutputMuted = true },
+            new() { Id = 1, Nickname = "AKI76PL", Talking = true, Country = "PL" },
+            new() { Id = 2, Nickname = "Kamil", Talking = true, Whisper = true, Country = "PL" },
+            new() { Id = 3, Nickname = "Ola", Uid = cfg.Favorites.FirstOrDefault()?.Uid ?? "", Country = "DE" },
+            new() { Id = 4, Nickname = "Marek", InputMuted = true, OutputMuted = true, Country = "GB", Recording = true },
         }, 1, muted || cfg.MuteWarning, false,
         cfg.WatchedChannels.Count > 0
             ? new List<ChannelView> { new(cfg.WatchedChannels[0], new() { new() { Id = 7, Nickname = "Piotr" }, new() { Id = 8, Nickname = "Ewa" } }) }

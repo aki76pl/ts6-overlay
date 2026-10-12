@@ -57,7 +57,7 @@ public sealed class ObsServer : IDisposable
             whisper = m.Whisper,
             me = m.Id == myId,
             muted = m.InputMuted,
-            deaf = m.OutputMuted,
+            deaf = m.OutputMuted, country = cfg.ShowFlags && m.Country.Length == 2 ? m.Country.ToLowerInvariant() : null, recording = m.Recording,
             color = cfg.FavoriteFor(m.Uid)?.Color,
         };
         var servers = s.Servers.Select(v => new
@@ -179,7 +179,9 @@ async function tick() {
         const nc = m.color || (m.talking ? t.TextTalking : t.Text);
         return '<div class="row" style="background:' + (m.talking ? t.TalkRow : 'transparent') + (small ? ';font-size:12px' : '') + '">'
           + '<span class="dot" style="background:' + dc + ';' + glow + '"></span>'
+          + (m.country ? '<img src="https://flagcdn.com/20x15/' + m.country + '.png" width="18" height="13" style="margin-right:2px">' : '')
           + '<span style="color:' + nc + ';font-weight:' + (m.talking ? 700 : 400) + ';' + shadow + '">' + (m.color ? '★ ' : '') + esc(m.nick) + (m.me ? s.texts.me : '') + '</span>'
+          + (m.recording ? '<span class="ic" style="color:#f33">⏺</span>' : '')
           + (m.muted ? '<span class="ic" style="color:' + t.Muted + '">🎙✕</span>' : '')
           + (m.deaf ? '<span class="ic" style="color:' + t.Muted + '">🔇</span>' : '')
           + '</div>';

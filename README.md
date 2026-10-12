@@ -53,6 +53,9 @@ Jeśli przeglądarka (np. Edge lub Chrome) oznaczy plik jako „rzadko pobierany
 | **Kilka serwerów** | gdy TeamSpeak jest połączony z kilkoma serwerami, nakładka pokazuje je wszystkie |
 | **Kopia ustawień** | eksport i import wszystkiego (motywy, dźwięki, bindy, ulubieni, profile) w jednym pliku `.ts6backup` |
 | **English** | interfejs po polsku lub angielsku (domyślnie według języka Windows) |
+| **Flagi krajów** | flaga przy nicku każdej osoby (obrazki z flagcdn.com, zapisywane na dysku) |
+| **Ktoś nagrywa** | czerwony pasek „⏺ NAGRYWA: …”, powiadomienie, sygnał i opcjonalny błysk RGB, gdy ktoś na Twoim kanale nagrywa rozmowę |
+| **World of Tanks** | pobieranie aktualnego Aslain's WoT Modpack (z numerem wersji i powiadomieniem o nowej), instrukcja i przycisk aktywacji statystyk XVM |
 | **Nazwy kanałów** | usuwa znaczniki `[spacer]` i ozdobniki, np. `[spacer]╟-● Pluton 9` → `Pluton 9` |
 
 ## Obsługa
@@ -93,6 +96,15 @@ Discord wymaga identyfikatora aplikacji (Application ID). Utwórz go raz na [dis
 ### Podświetlenie RGB
 
 Wymaga darmowego programu [OpenRGB](https://openrgb.org) z włączonym serwerem SDK: karta **SDK Server → Start Server**. Potem w **Ustawieniach → Integracje** zaznacz „Włącz błyski RGB” i wybierz zdarzenia oraz kolory. Przed błyskiem program zapisuje bieżące podświetlenie jako profil OpenRGB `TS6Overlay-restore`, a po błysku je przywraca.
+
+### World of Tanks: Aslain i XVM
+
+W **Ustawieniach → World of Tanks**:
+
+- **Aslain's WoT Modpack**: program pokazuje aktualną wersję ze strony autora i pobiera instalator do folderu Pobrane. Instalację uruchamiasz sam przyciskiem **Uruchom instalator** (przed instalacją zamknij grę). Dostępny jest też nowy **Aslain's Mod Manager**. Opcjonalnie program powiadomi Cię o nowej wersji modpacka.
+- **XVM**: statystyki graczy w bitwie działają po aktywacji na [modxvm.com](https://modxvm.com/en/). Kliknij „Login” i zaloguj się kontem Wargaming, potem „Activate Services”, a na koniec wejdź do gry tym samym kontem. Aktywację przedłużasz za darmo tym samym przyciskiem.
+
+Instaluj tylko mody dozwolone przez Wargaming. Lista zakazanych modów jest w zasadach Fair Play.
 
 ### OBS
 

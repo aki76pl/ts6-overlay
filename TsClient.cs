@@ -17,6 +17,10 @@ public sealed class ClientInfo
     public bool Whisper;
     public bool InputMuted;
     public bool OutputMuted;
+    /// <summary>Kod kraju ISO (np. "PL"), "" = nieznany.</summary>
+    public string Country = "";
+    /// <summary>Nagrywa rozmowę w TS.</summary>
+    public bool Recording;
 
     public ClientInfo Copy() => (ClientInfo)MemberwiseClone();
 }
@@ -99,7 +103,7 @@ public sealed class ConnectionState
     }
 }
 
-public enum NoticeKind { Join, Leave, Info, Message, Poke, Friend, Watched }
+public enum NoticeKind { Join, Leave, Info, Message, Poke, Friend, Watched, Recording }
 
 /// <param name="Speech">Tekst dla lektora (krótszy, bez „(a)”); null = jak Text.</param>
 public sealed record Notice(string Text, NoticeKind Kind, ClientInfo? Who = null, string? Speech = null);
@@ -365,7 +369,10 @@ public sealed class TsClient
                 case "clientPropertiesUpdated":
                     {
                         var c = Conn(Int(p["connectionId"]));
-                        ApplyClientProps(c.Get(Int(p["clientId"])), p["properties"]);
+                        var cl = c.Get(Int(p["clientId"]));
+                        bool wasRecording = cl.Recording;
+                        ApplyClientProps(cl, p["properties"]);
+                        if (cl.Recording != wasRecording) OnRecordingChanged(c, cl);
                         break;
                     }
                 case "clientSelfPropertyUpdated":
@@ -508,7 +515,10 @@ public sealed class TsClient
         bool watchedNew = newCh != 0 && IsWatched(c, newCh);
 
         if (newCh == myCh && oldCh != myCh && myCh != 0)
+        {
             Raise(new(at + T("{0} dołączył(a) do kanału", cl.Nickname), NoticeKind.Join, cl.Copy(), T("{0} wchodzi", cl.Nickname)));
+            if (cl.Recording) OnRecordingChanged(c, cl);   // wszedł, już nagrywając
+        }
         else if (oldCh == myCh && newCh != myCh && myCh != 0)
             Raise(new(at + (newCh == 0
                 ? T("{0} rozłączył(a) się", cl.Nickname)
@@ -608,9 +618,22 @@ public sealed class TsClient
             text == "" ? T("{0} cię szturcha", name) : T("{0} cię szturcha: {1}", name, text)));
     }
 
+    /// <summary>Ktoś na Twoim kanale zaczął albo przestał nagrywać.</summary>
+    void OnRecordingChanged(ConnectionState c, ClientInfo cl)
+    {
+        if (!_cfg.RecordingWarning || cl.Id == c.MyClientId || cl.ChannelId != c.MyChannelId || c.MyChannelId == 0) return;
+        string at = Where(c);
+        if (cl.Recording)
+            Raise(new(at + T("⏺ {0} nagrywa rozmowę na kanale!", cl.Nickname), NoticeKind.Recording, cl.Copy(), T("Uwaga, {0} nagrywa kanał", cl.Nickname)));
+        else
+            Raise(new(at + T("{0} przestał(a) nagrywać", cl.Nickname), NoticeKind.Info, cl.Copy()));
+    }
+
     static void ApplyClientProps(ClientInfo cl, JsonNode? props)
     {
         if (props is not JsonObject o) return;
+        if (o.ContainsKey("country")) cl.Country = Str(o["country"]).Trim().ToUpperInvariant();
+        if (o.ContainsKey("isRecording")) cl.Recording = Bool(o["isRecording"]);
         var nick = Str(o["nickname"]);
         if (nick != "") cl.Nickname = nick;
         var uid = Str(o["uniqueIdentifier"]);

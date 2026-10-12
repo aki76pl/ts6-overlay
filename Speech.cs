@@ -37,6 +37,7 @@ public sealed class Speech : IDisposable
         NoticeKind.Message => _cfg.TtsMessages,
         NoticeKind.Poke => _cfg.TtsPokes,
         NoticeKind.Friend or NoticeKind.Watched => _cfg.TtsFriends,
+        NoticeKind.Recording => true,
         _ => false,
     };
 

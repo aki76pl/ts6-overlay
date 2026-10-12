@@ -105,6 +105,7 @@ public partial class App : Application
         _ = Task.Run(() => Ts.RunAsync(_stop.Token));
 
         Mic.VoiceChanged += v => Dispatcher.BeginInvoke(() => OnVoiceWhileMuted(v));
+        Flags.Loaded += Refresh;
         Voice = new Speech(Cfg);
         Discord = new DiscordPresence(Cfg);
         Lights = new Rgb(Cfg);
@@ -140,6 +141,8 @@ public partial class App : Application
             _tray.ShowBalloonTip(4000, "TS6 Overlay", T("Zaktualizowano do wersji {0}.", Updater.Current), Forms.ToolTipIcon.Info);
         if (Cfg.AutoUpdateCheck)
             _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => Dispatcher.BeginInvoke(() => CheckForUpdates(false)));
+        if (Cfg.AslainNotify)
+            _ = Task.Delay(TimeSpan.FromSeconds(25)).ContinueWith(_ => Dispatcher.BeginInvoke(CheckAslain));
     }
 
     const string ShowSettingsEvent = "TS6Overlay.showSettings";
@@ -249,7 +252,7 @@ public partial class App : Application
         object Member(ClientInfo m, int myId) => new
         {
             nick = m.Nickname, talking = m.Talking, whisper = m.Whisper, me = m.Id == myId,
-            muted = m.InputMuted, deaf = m.OutputMuted, fav = Cfg.FavoriteFor(m.Uid) != null,
+            muted = m.InputMuted, deaf = m.OutputMuted, country = Cfg.ShowFlags && m.Country.Length == 2 ? m.Country.ToLowerInvariant() : null, recording = m.Recording, fav = Cfg.FavoriteFor(m.Uid) != null,
         };
         var (_, tree) = Ts.ServerTree();
         return System.Text.Json.JsonSerializer.Serialize(new
@@ -302,6 +305,7 @@ public partial class App : Application
             case NoticeKind.Leave when Cfg.SoundOnLeave: Sounds.Play(SoundKind.Leave); break;
             case NoticeKind.Message when Cfg.SoundOnMessage: Sounds.Play(SoundKind.Message); break;
             case NoticeKind.Poke when Cfg.SoundOnPoke: Sounds.Play(SoundKind.Poke); break;
+            case NoticeKind.Recording when Cfg.SoundOnRecording: Sounds.Play(SoundKind.Recording); break;
         }
 
         var flash = Cfg.RgbColorFor(n.Kind.ToString());
@@ -586,6 +590,26 @@ public partial class App : Application
         }
     }
 
+    // ---------- Aslain's WoT Modpack ----------
+
+    async void CheckAslain()
+    {
+        try
+        {
+            var r = await WotTools.CheckAslainAsync();
+            if (r.Version == Cfg.AslainLastSeen) return;
+            bool first = Cfg.AslainLastSeen == "";
+            Cfg.AslainLastSeen = r.Version;
+            Cfg.Save();
+            if (first) return;   // pierwsze sprawdzenie tylko zapamiętuje wersję
+            _tray.ShowBalloonTip(10000, T("Nowy Aslain's WoT Modpack"),
+                T("Dostępna wersja {0}. Pobierzesz ją w Ustawieniach → World of Tanks.", r.Version), Forms.ToolTipIcon.Info);
+        }
+        catch { }
+    }
+
+    public void OpenWotTab() => OpenSettings(SettingsWindow.TabWot);
+
     // ---------- zasobnik ----------
 
     void SetStatus(string s)
@@ -725,7 +749,8 @@ public partial class App : Application
             bmp.Render(el);
             var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
             enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
-            using var f = System.IO.File.Create(System.IO.Path.Combine(dir, t.Name.Split(' ')[0] + ".png"));
+            var safe = string.Concat(t.Name.Select(ch => System.IO.Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
+            using var f = System.IO.File.Create(System.IO.Path.Combine(dir, safe + ".png"));
             enc.Save(f);
             w.Close();
         }
