@@ -210,7 +210,7 @@ public sealed class Config
 
     public bool LogRawEvents { get; set; } = false;
 
-    public static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TS6Overlay");
+    public static string Dir => Environment.GetEnvironmentVariable("TS6_OVERLAY_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TS6Overlay");
     static string FilePath => Path.Combine(Dir, "config.json");
     public static string LogPath => Path.Combine(Dir, "events.log");
     public static string ThemesDir => Path.Combine(Dir, "themes");

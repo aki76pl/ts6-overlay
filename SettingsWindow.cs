@@ -13,7 +13,7 @@ using Forms = System.Windows.Forms;
 namespace TS6Overlay;
 
 /// <summary>Okno ustawień: wszystkie opcje z podglądem nakładki na żywo. Zmiany zapisują się od razu.</summary>
-public sealed class SettingsWindow : Window
+public sealed partial class SettingsWindow : Window
 {
     public const int TabLook = 0, TabEditor = 1, TabBehavior = 2, TabNotify = 3, TabBinds = 4, TabPeople = 5, TabObs = 6, TabPhone = 7, TabWot = 8, TabUpdates = 9;
 
@@ -24,8 +24,8 @@ public sealed class SettingsWindow : Window
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
 
     // kolory okna (ciemne, niezależnie od motywu nakładki)
-    static readonly Brush Bg = Theme.B("#FF1B1E24"), Card = Theme.B("#FF242830"), Fg = Theme.B("#FFE6E8EB"),
-        Dim = Theme.B("#FF9AA1AC"), AccentB = Theme.B("#FF2FBF55"), InputBg = Theme.B("#FF2E333C"), Line = Theme.B("#FF3A404B");
+    static readonly Brush Bg = Theme.B("#FF0B101B"), Card = Theme.B("#FF141D2D"), Fg = Theme.B("#FFE6E8EB"),
+        Dim = Theme.B("#FF9AA1AC"), AccentB = Theme.B("#FF79A8FF"), InputBg = Theme.B("#FF1C2940"), Line = Theme.B("#FF2B3B55");
 
     public SettingsWindow(App app)
     {
@@ -69,26 +69,7 @@ public sealed class SettingsWindow : Window
             else CancelCapture();
         };
 
-        var previewBox = new Border
-        {
-            Background = Checker(),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(16),
-            Child = new Viewbox { Child = _preview, StretchDirection = StretchDirection.DownOnly, VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Left },
-        };
-        var right = new DockPanel { Margin = new Thickness(12, 0, 0, 0) };
-        var cap = Label("Podgląd (przykładowe dane)", dim: true);
-        DockPanel.SetDock(cap, Dock.Top);
-        right.Children.Add(cap);
-        right.Children.Add(previewBox);
-
-        var grid = new Grid { Margin = new Thickness(12) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 300 });
-        grid.Children.Add(_tabs);
-        Grid.SetColumn(right, 1);
-        grid.Children.Add(right);
-        Content = grid;
+        BuildSettingsShell();
 
         _timer.Tick += (_, _) => TimerTick();
         _timer.Start();
@@ -1542,13 +1523,13 @@ public sealed class SettingsWindow : Window
 
     static TabItem Tab(string header, UIElement content) => new() { Header = T(header), Content = content };
 
-    static StackPanel Page() => new() { Margin = new Thickness(16, 8, 16, 16) };
+    static StackPanel Page() => new() { Margin = new Thickness(24, 4, 24, 28) };
 
     ScrollViewer Scroll(UIElement e) => new() { Content = e, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = Card };
 
     TextBlock Header(string text) => new()
     {
-        Text = T(text), FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = AccentB, Margin = new Thickness(0, 16, 0, 6),
+        Text = T(text), FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = AccentB, Margin = new Thickness(0, 24, 0, 12),
     };
 
     TextBlock Label(string text, double width = double.NaN, bool dim = false) => new()

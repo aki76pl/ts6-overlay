@@ -21,7 +21,7 @@ public sealed class OverlayView : StackPanel
     readonly Border _banner = new() { Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 4), Visibility = Visibility.Collapsed };
     readonly TextBlock _bannerIcon = new() { FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 18, Text = "", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Brushes.White };
     readonly TextBlock _bannerText = new() { FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
-    readonly Border _panel = new() { Padding = new Thickness(10, 8, 10, 8) };
+    readonly Border _panel = new() { Padding = new Thickness(16, 14, 16, 14) };
     readonly StackPanel _content = new();
     readonly StackPanel _peek = new() { Visibility = Visibility.Collapsed };
     readonly StackPanel _notices = new();
@@ -33,6 +33,8 @@ public sealed class OverlayView : StackPanel
     string? _hint;
     DateTime _lastActivity = DateTime.Now;
     int _memberRows;
+    readonly HashSet<(int, int)> _speaking = new();
+    bool _animateSpeaker;
 
     public OverlayView(Config cfg, bool preview = false)
     {
@@ -109,6 +111,7 @@ public sealed class OverlayView : StackPanel
             var rows = new List<UIElement>();
             foreach (var m in srv.Members)
             {
+                _animateSpeaker = m.Talking && !_speaking.Contains((srv.ConnectionId, m.Id));
                 anyTalking |= m.Talking;
                 if (!_cfg.ShowChannelList && !m.Talking) continue;
                 rows.Add(Row(m, m.Id == srv.MyId, small: false));
@@ -132,6 +135,11 @@ public sealed class OverlayView : StackPanel
                 _memberRows += wrows.Count;
             }
         }
+        _speaking.Clear();
+        foreach (var server in s.Servers)
+            foreach (var member in server.Members.Where(m => m.Talking))
+                _speaking.Add((server.ConnectionId, member.Id));
+        _animateSpeaker = false;
         if (anyTalking) Touch();
         if (_idle) SetIdle(true);   // nowe wiersze dostają stan autoukrywania
         UpdateBanner();
@@ -142,9 +150,9 @@ public sealed class OverlayView : StackPanel
     {
         Text = text,
         FontWeight = FontWeights.SemiBold,
-        FontSize = small ? 11 : 12,
+        FontSize = small ? 11 : 13,
         Opacity = dim ? 0.75 : 1,
-        Margin = new Thickness(0, top, 0, 4),
+        Margin = new Thickness(2, top + 2, 0, 10),
         Foreground = Theme.B(_t.Header),
         Effect = TextShadow(),
         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -186,14 +194,17 @@ public sealed class OverlayView : StackPanel
         // Ikony Segoe MDL2 Assets: wyciszony mikrofon / wyciszone głośniki.
         if (m.InputMuted) row.Children.Add(MuteIcon(""));
         if (m.OutputMuted) row.Children.Add(MuteIcon(""));
-        return new Border
+        var surface = new Border
         {
             Child = row,
-            Margin = new Thickness(-4, 0, -4, 0),
-            Padding = new Thickness(4, 1, 4, 1),
-            CornerRadius = new CornerRadius(Math.Min(_t.Radius, 4)),
+            Margin = new Thickness(-4, 3, -4, 3),
+            Padding = new Thickness(10, 7, 10, 7),
+            CornerRadius = new CornerRadius(Math.Min(_t.Radius, 10)),
             Background = m.Talking ? Theme.B(_t.TalkRow) : Brushes.Transparent,
         };
+        if (_animateSpeaker && SystemParameters.ClientAreaAnimation)
+            surface.BeginAnimation(OpacityProperty, new DoubleAnimation(.45, 1, TimeSpan.FromMilliseconds(180)));
+        return surface;
     }
 
     /// <summary>Flaga kraju (obrazek) albo kod tekstem, gdy obrazka jeszcze nie ma.</summary>
@@ -217,7 +228,7 @@ public sealed class OverlayView : StackPanel
     UIElement RecordingBadge(List<string> who) => new Border
     {
         Background = Theme.B(_t.Banner),
-        CornerRadius = new CornerRadius(Math.Min(_t.Radius, 4)),
+        CornerRadius = new CornerRadius(Math.Min(_t.Radius, 10)),
         Padding = new Thickness(6, 2, 6, 2),
         Margin = new Thickness(0, 0, 0, 4),
         Child = new TextBlock

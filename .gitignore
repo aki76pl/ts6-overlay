@@ -6,3 +6,6 @@ publish/
 *.log
 dist/
 *.zip
+
+qa-data/
+.dotnet-home/

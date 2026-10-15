@@ -96,7 +96,7 @@ public partial class App : Application
         Sounds.Files = new(Cfg.SoundFiles);
 
         if (args.Contains("--updated")) Installer.RefreshVersion();
-        else if (!handover && OfferInstall()) { Shutdown(); return; }
+        else if (!handover && !args.Contains("--design-check") && OfferInstall()) { Shutdown(); return; }
 
         _win = new OverlayWindow(Cfg);
         _win.Moved += OnOverlayMoved;
@@ -107,7 +107,7 @@ public partial class App : Application
         Ts.Notice += n => Dispatcher.BeginInvoke(() => OnNotice(n));
         Ts.TalkChanged += (c, t) => Dispatcher.BeginInvoke(() => Stats.OnTalk(c, t));
         Ts.Status += s => Dispatcher.BeginInvoke(() => SetStatus(s));
-        _ = Task.Run(() => Ts.RunAsync(_stop.Token));
+        if (!args.Contains("--design-check")) _ = Task.Run(() => Ts.RunAsync(_stop.Token));
 
         Mic.VoiceChanged += v => Dispatcher.BeginInvoke(() => OnVoiceWhileMuted(v));
         Flags.Loaded += Refresh;
@@ -128,6 +128,11 @@ public partial class App : Application
         Links.Opening += u => Dispatcher.BeginInvoke(() => _win.View.AddNotice(new(T("Otwieram: {0}", Links.Display(u)), NoticeKind.Info)));
         Binds.StoppedAll += () => Voice.Stop();
         _peekTimer.Tick += (_, _) => CheckPeekRelease();
+        if (args.Contains("--design-check"))
+        {
+            Dispatcher.BeginInvoke(() => DesignCheck.Run(this));
+            return;
+        }
         BuildTray();
         RegisterToggleHotkey();
         ListenForSecondInstance();

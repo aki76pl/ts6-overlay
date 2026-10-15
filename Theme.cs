@@ -48,6 +48,7 @@ public sealed record Theme
 
     public static readonly Theme[] Builtin =
     {
+        new() { Name = "Aurora", Panel = "#EC101A2B", PanelBorder = "#664D75AE", BorderWidth = 1, Radius = 18, Font = "Segoe UI Variable Text", Text = "#FFB8C8E0", TextTalking = "#FFFFFFFF", Header = "#FF86ADFA", Talk = "#FF72DCCB", Whisper = "#FFB59CFF", Idle = "#FF566982", TalkRow = "#354DAAF5", Accent = "#FF86ADFA", Join = "#EE1C504E", Leave = "#EE593346", Info = "#EE253E66", Glow = true },
         new() { Name = "Ciemny" },
 
         new()

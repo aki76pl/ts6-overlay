@@ -8,7 +8,7 @@ public static class GameDetector
 {
     static readonly HashSet<string> NeverGame = new(StringComparer.OrdinalIgnoreCase)
     {
-        "explorer", "TeamSpeak", "TS6Overlay", "ShellExperienceHost", "StartMenuExperienceHost", "SearchHost",
+        "explorer", "TeamSpeak", "TS6Overlay", "TS6OverlayModern", "ShellExperienceHost", "StartMenuExperienceHost", "SearchHost",
         "LockApp", "ApplicationFrameHost", "TextInputHost",
         // przeglądarki i odtwarzacze na pełnym ekranie to nie gry
         "chrome", "msedge", "firefox", "opera", "opera_gx", "brave", "vivaldi", "vlc", "mpc-hc64", "mpc-be64", "PotPlayerMini64",

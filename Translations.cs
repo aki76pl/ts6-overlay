@@ -516,6 +516,16 @@ public static class Translations
         ["Domyślna przeglądarka Windows"] = "Windows default browser",
         ["Otwieraj linki w"] = "Open links in",
         ["Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."] = "A browser that's already running opens fastest — the link goes straight into a new tab.",
+        ["Ustawienia"] = "Settings",
+        ["Dostosuj nakładkę do swojego stylu gry."] = "Adjust the overlay to your play style.",
+        ["PODGLĄD NA ŻYWO"] = "LIVE PREVIEW",
+        ["Twój overlay"] = "Your overlay",
+        ["Sprawdź wygląd na przykładowych danych."] = "Check the look with sample data.",
+        ["Zmiany zapisują się automatycznie.\n\nCtrl + przeciągnięcie — przesuń nakładkę\nCtrl + Shift + O — pokaż / ukryj"] = "Changes are saved automatically.\n\nCtrl + drag — move the overlay\nCtrl + Shift + O — show / hide",
+        ["PERSONALIZACJA"] = "PERSONALIZATION",
+        ["STEROWANIE"] = "CONTROLS",
+        ["POŁĄCZENIA"] = "CONNECTIONS",
+        ["SYSTEM"] = "SYSTEM",
     };
 
     /// <summary>Tłumaczenia niemieckie: klucz = tekst polski.</summary>
@@ -1032,5 +1042,15 @@ public static class Translations
         ["Domyślna przeglądarka Windows"] = "Standardbrowser von Windows",
         ["Otwieraj linki w"] = "Links öffnen in",
         ["Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."] = "Am schnellsten öffnet sich ein Browser, der bereits läuft — der Link landet sofort in einem neuen Tab.",
+        ["Ustawienia"] = "Einstellungen",
+        ["Dostosuj nakładkę do swojego stylu gry."] = "Passe das Overlay an deinen Spielstil an.",
+        ["PODGLĄD NA ŻYWO"] = "LIVE-VORSCHAU",
+        ["Twój overlay"] = "Dein Overlay",
+        ["Sprawdź wygląd na przykładowych danych."] = "Prüfe das Aussehen mit Beispieldaten.",
+        ["Zmiany zapisują się automatycznie.\n\nCtrl + przeciągnięcie — przesuń nakładkę\nCtrl + Shift + O — pokaż / ukryj"] = "Änderungen werden automatisch gespeichert.\n\nStrg + Ziehen — Overlay verschieben\nStrg + Umschalt + O — ein-/ausblenden",
+        ["PERSONALIZACJA"] = "PERSONALISIERUNG",
+        ["STEROWANIE"] = "STEUERUNG",
+        ["POŁĄCZENIA"] = "VERBINDUNGEN",
+        ["SYSTEM"] = "SYSTEM",
     };
 }

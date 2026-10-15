@@ -26,8 +26,13 @@ public static class Installer
     {
         get
         {
-            using var k = Registry.CurrentUser.OpenSubKey(RunKey);
-            return k?.GetValue("TS6Overlay") != null;
+            try
+            {
+                using var k = Registry.CurrentUser.OpenSubKey(RunKey);
+                return k?.GetValue("TS6Overlay") != null;
+            }
+            catch (System.Security.SecurityException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
         set
         {

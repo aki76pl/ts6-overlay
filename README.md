@@ -38,7 +38,8 @@ Jeśli przeglądarka (np. Edge lub Chrome) oznaczy plik jako „rzadko pobierany
 | **Autoukrywanie** | gdy nikt nie mówi, nakładka blednie albo zostaje sam nagłówek; wraca od razu, gdy coś się dzieje |
 | **Tylko w grach** | nakładka widoczna tylko wtedy, gdy gra z listy (albo dowolna aplikacja pełnoekranowa) jest na pierwszym planie |
 | **Ulubieni i ignorowani** | ulubieni mają własny kolor nicku i dźwięk wejścia; ignorowani (np. boty muzyczne) znikają z nakładki |
-| **Motywy** | 8 wbudowanych motywów (domyślny Terminal) i edytor do tworzenia własnych; motywy wymieniasz ze znajomymi w plikach `.ts6theme` |
+| **Motywy** | 9 wbudowanych motywów (domyślny Terminal, nowy Aurora) i edytor do tworzenia własnych; motywy wymieniasz ze znajomymi w plikach `.ts6theme` |
+| **Centrum ustawień** | nowe okno ustawień z bocznym menu (Personalizacja, Sterowanie, Połączenia, System) i podglądem nakładki na żywo |
 | **OBS** | ta sama nakładka jako strona `http://localhost:5898/` dla źródła „Przeglądarka”; działa też w grach pełnoekranowych |
 | **Statystyki** | bieżąca sesja oraz historia dni, tygodni i miesięcy: kto ile był na serwerze i mówił, z wykresami; eksport do CSV |
 | **Archiwum czatu** | wiadomości i szturchnięcia zapisywane z datą, z wyszukiwarką |
