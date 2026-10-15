@@ -105,7 +105,7 @@ public sealed class StatsWindow : Window
         if (_historyShown != _stats.History.Count)
         {
             _historyShown = _stats.History.Count;
-            _history.ItemsSource = _stats.History.AsEnumerable().Reverse().Select(h => $"{h.Time:HH:mm:ss}   {h.Text}").ToList();
+            _history.ItemsSource = _stats.History.AsEnumerable().Reverse().Select(h => LinkLine($"{h.Time:HH:mm:ss}   {h.Text}")).ToList();
         }
     }
 
@@ -299,7 +299,7 @@ public sealed class StatsWindow : Window
         };
         var found = ChatArchive.Search(_query.Text.Trim(), from);
         _results.ItemsSource = found.Select(e =>
-            $"{e.Time:yyyy-MM-dd HH:mm}  {(e.Kind == nameof(NoticeKind.Poke) ? "👉 " : "✉ ")}{e.Text}" + (e.Server != "" ? $"   [{e.Server}]" : "")).ToList();
+            LinkLine($"{e.Time:yyyy-MM-dd HH:mm}  {(e.Kind == nameof(NoticeKind.Poke) ? "👉 " : "✉ ")}{e.Text}" + (e.Server != "" ? $"   [{e.Server}]" : ""))).ToList();
         _resultInfo.Text = found.Count == 0
             ? T("Nic nie znaleziono. Archiwum zapisuje wiadomości i szturchnięcia od wersji 3.1.")
             : T("Znaleziono: {0}", found.Count) + (found.Count >= 1000 ? " " + T("(pokazano 1000 najnowszych)") : "");
@@ -312,6 +312,14 @@ public sealed class StatsWindow : Window
     static void Dark(ItemsControl c) { c.Background = Card; c.Foreground = Fg; c.BorderThickness = new Thickness(0); }
 
     TextBlock Caption(string text) => new() { Text = T(text), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 6) };
+
+    /// <summary>Wiersz listy z klikalnymi linkami (kliknięcie otwiera w przeglądarce).</summary>
+    static TextBlock LinkLine(string text)
+    {
+        var tb = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        tb.Inlines.AddRange(Links.Inlines(text, Accent));
+        return tb;
+    }
 
     static void Add(Grid g, UIElement e, int row) { Grid.SetRow(e, row); g.Children.Add(e); }
 

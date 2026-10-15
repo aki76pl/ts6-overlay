@@ -267,15 +267,22 @@ public sealed class OverlayView : StackPanel
             MaxWidth = 420,
             HorizontalAlignment = HorizontalAlignment.Left,
             Background = Theme.B(bg),
-            Child = new TextBlock
-            {
-                Text = prefix + text,
-                Foreground = Theme.B(_t.NoticeText),
-                FontSize = 13,
-                TextWrapping = TextWrapping.Wrap,
-                FontWeight = kind == NoticeKind.Poke ? FontWeights.Bold : FontWeights.Normal,
-            },
+            Child = NoticeText(prefix + text, kind),
         };
+    }
+
+    /// <summary>Tekst powiadomienia; linki jako Hyperlink (klikane z Ctrl — obsługa w oknie nakładki).</summary>
+    TextBlock NoticeText(string text, NoticeKind kind)
+    {
+        var tb = new TextBlock
+        {
+            Foreground = Theme.B(_t.NoticeText),
+            FontSize = 13,
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = kind == NoticeKind.Poke ? FontWeights.Bold : FontWeights.Normal,
+        };
+        tb.Inlines.AddRange(Links.Inlines(text, Theme.B(_t.Accent), attachClick: _preview));
+        return tb;
     }
 
     /// <summary>Dodaje powiadomienie; persistent = nie znika (podgląd w ustawieniach).</summary>

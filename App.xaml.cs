@@ -124,6 +124,7 @@ public partial class App : Application
 
         Binds = new BindManager(Cfg);
         Binds.PeekPressed += StartPeek;
+        Binds.OpenLinkPressed += OpenLastLink;
         Binds.StoppedAll += () => Voice.Stop();
         _peekTimer.Tick += (_, _) => CheckPeekRelease();
         BuildTray();
@@ -307,6 +308,7 @@ public partial class App : Application
         Obs.AddNotice(n);
         Obs.Update(_state, _win.View.Theme, Cfg);
         Stats.OnNotice(n);
+        if (n.Kind is NoticeKind.Message or NoticeKind.Poke && Links.Find(n.Text) is { Count: > 0 } found) LastLink = found[^1];
         if (Cfg.KeepChatArchive) ChatArchive.Append(n, _state.Active?.Server ?? "");
         if (Phone.Running) _phoneJson = PhoneJson();
 
@@ -329,6 +331,21 @@ public partial class App : Application
 
         if (Voice.Wants(n) && (!Cfg.TtsOnlyInGame || GameDetector.IsGameInForeground(Cfg) == true))
             Voice.Say(n.Speech ?? n.Text);
+    }
+
+    // ---------- linki ----------
+
+    /// <summary>Ostatni link z wiadomości (skrót „otwórz ostatni link”).</summary>
+    public Uri? LastLink { get; private set; }
+
+    void OpenLastLink()
+    {
+        if (LastLink == null)
+        {
+            _win.View.AddNotice(new(T("Nikt jeszcze nie wysłał linku w tej sesji."), NoticeKind.Info));
+            return;
+        }
+        if (Links.Open(LastLink)) _win.View.AddNotice(new(T("Otwieram: {0}", Links.Display(LastLink)), NoticeKind.Info));
     }
 
     // ---------- podgląd pod klawiszem ----------
@@ -829,6 +846,7 @@ public partial class App : Application
                     (DateTime.Now.AddMinutes(-5), "Kamil: " + T("idziemy na B?"), NoticeKind.Message),
                     (DateTime.Now.AddMinutes(-2), T("{0} szturcha Cię!", "Marek"), NoticeKind.Poke),
                     (DateTime.Now, "Ola: gg", NoticeKind.Message),
+                    (DateTime.Now, "Kamil: https://github.com/aki76pl/ts6-overlay", NoticeKind.Message),
                 }); }),
         };
         foreach (var (name, setup) in shots)

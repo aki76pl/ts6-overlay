@@ -128,6 +128,8 @@ public sealed class Config
     // --- podgląd pod klawiszem ---
     public SoundBind PeekServerBind { get; set; } = new() { Id = "peek-server", Name = "Podgląd serwera" };
     public SoundBind PeekMessagesBind { get; set; } = new() { Id = "peek-messages", Name = "Podgląd wiadomości" };
+    /// <summary>Otwiera ostatni link z czatu (domyślnie Ctrl+Alt+L).</summary>
+    public SoundBind OpenLinkBind { get; set; } = new() { Id = "open-link", Name = "Otwórz ostatni link", Modifiers = 3, Key = 0x4C };
 
     // --- profile gier ---
     public List<GameProfile> Profiles { get; set; } = new();

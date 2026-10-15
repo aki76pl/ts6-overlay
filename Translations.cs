@@ -504,6 +504,14 @@ public static class Translations
         ["Puste = nick z TS"] = "Empty = TS nickname",
         ["Odśwież listę osób"] = "Refresh people list",
         ["Pobrano statystyki: {0}"] = "Statistics fetched: {0}",
+        ["link do {0}"] = "link to {0}",
+        ["Nikt jeszcze nie wysłał linku w tej sesji."] = "Nobody has sent a link in this session yet.",
+        ["Otwieram: {0}"] = "Opening: {0}",
+        ["Linki z czatu"] = "Chat links",
+        ["Skrót otwiera w przeglądarce ostatni link wysłany na czacie — bez sięgania po mysz w grze. Linki w powiadomieniach otworzysz też myszą: przytrzymaj Ctrl nad nakładką i kliknij link. Otwierane są tylko adresy http/https."] = "The shortcut opens the last link sent in chat in your browser — no need to reach for the mouse in game. You can also open links in notifications with the mouse: hold Ctrl over the overlay and click the link. Only http/https addresses are opened.",
+        ["Otwórz link:"] = "Open link:",
+        ["Nie przypisano — np. Ctrl+Alt+L."] = "Not assigned — e.g. Ctrl+Alt+L.",
+        ["Otwórz ostatni link"] = "Open last link",
     };
 
     /// <summary>Tłumaczenia niemieckie: klucz = tekst polski.</summary>
@@ -1008,5 +1016,13 @@ public static class Translations
         ["Puste = nick z TS"] = "Leer = Nickname aus TS",
         ["Odśwież listę osób"] = "Personenliste aktualisieren",
         ["Pobrano statystyki: {0}"] = "Statistiken abgerufen: {0}",
+        ["link do {0}"] = "Link zu {0}",
+        ["Nikt jeszcze nie wysłał linku w tej sesji."] = "In dieser Sitzung hat noch niemand einen Link geschickt.",
+        ["Otwieram: {0}"] = "Öffne: {0}",
+        ["Linki z czatu"] = "Links aus dem Chat",
+        ["Skrót otwiera w przeglądarce ostatni link wysłany na czacie — bez sięgania po mysz w grze. Linki w powiadomieniach otworzysz też myszą: przytrzymaj Ctrl nad nakładką i kliknij link. Otwierane są tylko adresy http/https."] = "Die Tastenkombination öffnet den zuletzt im Chat geschickten Link im Browser — ohne im Spiel zur Maus zu greifen. Links in Benachrichtigungen öffnest du auch mit der Maus: halte Strg über dem Overlay gedrückt und klicke den Link. Geöffnet werden nur http/https-Adressen.",
+        ["Otwórz link:"] = "Link öffnen:",
+        ["Nie przypisano — np. Ctrl+Alt+L."] = "Nicht zugewiesen — z. B. Strg+Alt+L.",
+        ["Otwórz ostatni link"] = "Letzten Link öffnen",
     };
 }

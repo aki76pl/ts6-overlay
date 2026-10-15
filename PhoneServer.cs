@@ -223,6 +223,7 @@ const $ = id => document.getElementById(id);
 $('bindsH').textContent = T.binds; $('stopBtn').textContent = T.stop; $('toggleBtn').textContent = T.toggle;
 $('tS').textContent = T.server; $('tM').textContent = T.messages; $('off').textContent = T.offline;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const linkify = s => s.replace(/\bhttps?:\/\/[^\s<>"']+/gi, u => { const c = u.replace(/[.,;:!?)]+$/, ''); return '<a href="' + c + '" target="_blank" rel="noopener noreferrer" style="color:#7cff9e">' + c + '</a>' + u.slice(c.length); });
 let view = 's', lastBinds = '';
 function tab(v){ view = v; $('tS').className = v==='s'?'on':''; $('tM').className = v==='m'?'on':''; tick(); }
 async function post(cmd, id){ try{ await fetch('api/' + cmd + '?k=' + encodeURIComponent(k) + (id ? '&id=' + encodeURIComponent(id) : ''), {method:'POST'}); if (navigator.vibrate) navigator.vibrate(30); }catch(e){} }
@@ -254,7 +255,7 @@ async function tick(){
     if (view === 's'){
       $('tree').innerHTML = s.tree.map(c => '<div class="hdr">' + (c.mine ? '🔊 ' : '') + esc(c.name) + ' (' + c.members.length + ')</div>' + c.members.map(row).join('')).join('') || '—';
     } else {
-      $('tree').innerHTML = s.messages.length ? s.messages.map(m => '<div class="msg"><span class="time">' + esc(m.time) + '</span>' + esc(m.text) + '</div>').join('') : esc(T.noMessages);
+      $('tree').innerHTML = s.messages.length ? s.messages.map(m => '<div class="msg"><span class="time">' + esc(m.time) + '</span>' + linkify(esc(m.text)) + '</div>').join('') : esc(T.noMessages);
     }
   }catch(e){ $('off').style.display = 'block'; }
 }

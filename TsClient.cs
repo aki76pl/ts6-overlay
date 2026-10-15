@@ -605,8 +605,10 @@ public sealed class TsClient
         };
         if (!show) return;
         string where = mode switch { 1 => T(" (prywatnie)"), 3 => T(" (serwer)"), _ => "" };
-        if (text.Length > 160) text = text[..160] + "…";
-        Raise(new($"{Where(c)}{name}{where}: {text}", NoticeKind.Message, who, T("{0} pisze: {1}", name, text)));
+        // Długie wiadomości skracamy, ale nie wtedy, gdy zawierają link (ucięty adres byłby bezużyteczny).
+        if (text.Length > 160 && Links.Find(text).Count == 0) text = text[..160] + "…";
+        else if (text.Length > 500) text = text[..500] + "…";
+        Raise(new($"{Where(c)}{name}{where}: {text}", NoticeKind.Message, who, T("{0} pisze: {1}", name, Links.Speakable(text))));
     }
 
     void OnPoke(JsonNode p)

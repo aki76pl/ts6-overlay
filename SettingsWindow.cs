@@ -702,6 +702,12 @@ public sealed class SettingsWindow : Window
         p.Children.Add(_peekServerRow);
         p.Children.Add(_peekMsgRow);
 
+        p.Children.Add(Header("Linki z czatu"));
+        p.Children.Add(Hint("Skrót otwiera w przeglądarce ostatni link wysłany na czacie — bez sięgania po mysz w grze. " +
+                            "Linki w powiadomieniach otworzysz też myszą: przytrzymaj Ctrl nad nakładką i kliknij link. Otwierane są tylko adresy http/https."));
+        _linkRow = new ContentControl();
+        p.Children.Add(_linkRow);
+
         p.Children.Add(Header("Gdzie grać dźwięki bindów"));
         var dev = new ComboBox { MinWidth = 300 };
         var devices = BindManager.OutputDevices();
@@ -722,7 +728,7 @@ public sealed class SettingsWindow : Window
         return Scroll(p);
     }
 
-    ContentControl? _stopRow, _peekServerRow, _peekMsgRow;
+    ContentControl? _stopRow, _peekServerRow, _peekMsgRow, _linkRow;
 
     void RebuildStopRow()
     {
@@ -730,6 +736,7 @@ public sealed class SettingsWindow : Window
         _stopRow.Content = SpecialKeyRow(_cfg.StopBind, T("Skrót:"), T("Nie przypisano — kliknij przycisk i naciśnij np. Pause albo Ctrl+Alt+0."));
         _peekServerRow!.Content = SpecialKeyRow(_cfg.PeekServerBind, T("Serwer:"), T("Nie przypisano — np. Tab nie zadziała (gra go używa), spróbuj Ctrl+Tab albo `."));
         _peekMsgRow!.Content = SpecialKeyRow(_cfg.PeekMessagesBind, T("Wiadomości:"), T("Nie przypisano — np. Ctrl+M."));
+        _linkRow!.Content = SpecialKeyRow(_cfg.OpenLinkBind, T("Otwórz link:"), T("Nie przypisano — np. Ctrl+Alt+L."));
     }
 
     /// <summary>Skrót „specjalny” (zatrzymanie, podgląd): przycisk nagrywania, usuwanie, ostrzeżenia o kolizjach.</summary>
@@ -742,7 +749,7 @@ public sealed class SettingsWindow : Window
         var row = Row(Label(label, 100), keyBtn, Btn("Usuń skrót", () => { s.Key = 0; s.Modifiers = 0; Changed(); RebuildBinds(); }));
         var box = new StackPanel();
         box.Children.Add(row);
-        var specials = new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind };
+        var specials = new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind, _cfg.OpenLinkBind };
         string? warn = _app.Binds.Failed.Contains(s.Id) ? T("Skrót {0} jest zajęty przez inny program — wybierz inny.", s.KeyText)
             : s.Key != 0 && _cfg.Binds.Any(b => b.Enabled && b.Key == s.Key && b.Modifiers == s.Modifiers) ? T("Ten sam skrót ma jeden z bindów.")
             : s.Key != 0 && specials.Any(o => o != s && o.Key == s.Key && o.Modifiers == s.Modifiers) ? T("Ten sam skrót ma inny klawisz specjalny.")

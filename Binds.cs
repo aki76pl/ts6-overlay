@@ -80,6 +80,8 @@ public sealed class BindManager : IDisposable
     public event Action? Changed;
     /// <summary>Naciśnięto klawisz podglądu (serwer albo wiadomości) — App sprawdza, kiedy zostanie puszczony.</summary>
     public event Action<SoundBind>? PeekPressed;
+    /// <summary>Naciśnięto skrót „otwórz ostatni link”.</summary>
+    public event Action? OpenLinkPressed;
 
     public BindManager(Config cfg)
     {
@@ -95,7 +97,7 @@ public sealed class BindManager : IDisposable
         Failed.Clear();
         // Skróty specjalne mają własne id, przed bindami.
         int special = BaseId - 1;
-        foreach (var sb in new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind })
+        foreach (var sb in new[] { _cfg.StopBind, _cfg.PeekServerBind, _cfg.PeekMessagesBind, _cfg.OpenLinkBind })
         {
             if (sb.Key != 0)
             {
@@ -128,6 +130,7 @@ public sealed class BindManager : IDisposable
         {
             if (b == _cfg.StopBind) StopAll();
             else if (b == _cfg.PeekServerBind || b == _cfg.PeekMessagesBind) PeekPressed?.Invoke(b);
+            else if (b == _cfg.OpenLinkBind) OpenLinkPressed?.Invoke();
             else Trigger(b);
             handled = true;
         }

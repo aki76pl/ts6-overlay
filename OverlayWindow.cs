@@ -41,6 +41,12 @@ public sealed class OverlayWindow : Window
         MouseLeftButtonDown += (_, e) =>
         {
             if (!(_editMode || _ctrlDrag) || e.ButtonState != MouseButtonState.Pressed) return;
+            if (FindLink(e.OriginalSource as DependencyObject) is { NavigateUri: { } uri })
+            {
+                Links.Open(uri);
+                e.Handled = true;
+                return;
+            }
             DragMove();
             Moved?.Invoke(Left, Top);
         };
@@ -67,6 +73,17 @@ public sealed class OverlayWindow : Window
         _ctrlDrag = want;
         View.SetHighlight(want);
         ApplyClickThrough();
+    }
+
+    /// <summary>Hyperlink, w który kliknięto (przechodzi w górę drzewa od elementu pod kursorem).</summary>
+    static System.Windows.Documents.Hyperlink? FindLink(DependencyObject? d)
+    {
+        while (d != null)
+        {
+            if (d is System.Windows.Documents.Hyperlink h) return h;
+            d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
+        }
+        return null;
     }
 
     public bool EditMode
