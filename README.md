@@ -56,7 +56,7 @@ Jeśli przeglądarka (np. Edge lub Chrome) oznaczy plik jako „rzadko pobierany
 | **Flagi krajów** | flaga przy nicku każdej osoby (obrazki z flagcdn.com, zapisywane na dysku) |
 | **Ktoś nagrywa** | czerwony pasek „⏺ NAGRYWA: …”, powiadomienie, sygnał i opcjonalny błysk RGB, gdy ktoś na Twoim kanale nagrywa rozmowę |
 | **World of Tanks** | pobieranie aktualnego Aslain's WoT Modpack (z numerem wersji i powiadomieniem o nowej), aktywacja XVM z przypomnieniem przed wygaśnięciem, statystyki WoT osób z TS (procent zwycięstw, bitwy, obrażenia, rating WG) |
-| **Linki z czatu** | linki w wiadomościach są klikalne: Ctrl + klik na nakładce, skrót **Ctrl+Alt+L** otwiera ostatni link, klikalne także w archiwum czatu i na telefonie (tylko http/https) |
+| **Linki z czatu** | linki w wiadomościach są klikalne: Ctrl + klik na nakładce, skrót **Alt+K** otwiera ostatni link (wiadomość z linkiem widoczna domyślnie 5 s, czas ustawisz), klikalne także w archiwum czatu i na telefonie (tylko http/https) |
 | **Nazwy kanałów** | usuwa znaczniki `[spacer]` i ozdobniki, np. `[spacer]╟-● Pluton 9` → `Pluton 9` |
 
 ## Obsługa

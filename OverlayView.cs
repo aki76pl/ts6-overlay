@@ -295,7 +295,9 @@ public sealed class OverlayView : StackPanel
         UpdatePanelBackground();
         if (persistent) return;
 
-        int secs = n.Kind is NoticeKind.Message or NoticeKind.Poke or NoticeKind.Recording ? _cfg.MessageSeconds : _cfg.EventSeconds;
+        int secs = n.Kind is NoticeKind.Message or NoticeKind.Poke && Links.Find(n.Text).Count > 0 ? _cfg.LinkSeconds
+            : n.Kind is NoticeKind.Message or NoticeKind.Poke or NoticeKind.Recording ? _cfg.MessageSeconds
+            : _cfg.EventSeconds;
         var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(600)) { BeginTime = TimeSpan.FromSeconds(Math.Max(1, secs)) };
         fade.Completed += (_, _) => { _notices.Children.Remove(b); UpdatePanelBackground(); };
         b.BeginAnimation(OpacityProperty, fade);

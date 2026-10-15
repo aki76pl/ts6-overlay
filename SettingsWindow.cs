@@ -714,6 +714,7 @@ public sealed class SettingsWindow : Window
         bcombo.SelectedIndex = Math.Max(0, browsers.FindIndex(b => b.path.Equals(_cfg.LinkBrowser, StringComparison.OrdinalIgnoreCase)) + 1);
         bcombo.SelectionChanged += (_, _) => { _cfg.LinkBrowser = bcombo.SelectedIndex <= 0 ? "" : browsers[bcombo.SelectedIndex - 1].path; Changed(); };
         p.Children.Add(Row(Label("Otwieraj linki w", 140), bcombo));
+        p.Children.Add(SliderRow("Jak długo wiadomość z linkiem jest widoczna w grze", 2, 60, () => _cfg.LinkSeconds, v => _cfg.LinkSeconds = (int)v, v => $"{v:0} s"));
         p.Children.Add(Hint("Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."));
 
         p.Children.Add(Header("Gdzie grać dźwięki bindów"));
@@ -744,7 +745,7 @@ public sealed class SettingsWindow : Window
         _stopRow.Content = SpecialKeyRow(_cfg.StopBind, T("Skrót:"), T("Nie przypisano — kliknij przycisk i naciśnij np. Pause albo Ctrl+Alt+0."));
         _peekServerRow!.Content = SpecialKeyRow(_cfg.PeekServerBind, T("Serwer:"), T("Nie przypisano — np. Tab nie zadziała (gra go używa), spróbuj Ctrl+Tab albo `."));
         _peekMsgRow!.Content = SpecialKeyRow(_cfg.PeekMessagesBind, T("Wiadomości:"), T("Nie przypisano — np. Ctrl+M."));
-        _linkRow!.Content = SpecialKeyRow(_cfg.OpenLinkBind, T("Otwórz link:"), T("Nie przypisano — np. Ctrl+Alt+L."));
+        _linkRow!.Content = SpecialKeyRow(_cfg.OpenLinkBind, T("Otwórz link:"), T("Nie przypisano — np. Alt+K."));
     }
 
     /// <summary>Skrót „specjalny” (zatrzymanie, podgląd): przycisk nagrywania, usuwanie, ostrzeżenia o kolizjach.</summary>
