@@ -33,12 +33,61 @@ public static class Links
     static bool TryParse(string s, out Uri uri) =>
         Uri.TryCreate(s, UriKind.Absolute, out uri!) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) && uri.Host != "";
 
-    /// <summary>Otwiera adres w domyślnej przeglądarce — wyłącznie http/https.</summary>
+    /// <summary>Ścieżka przeglądarki wybranej w ustawieniach; pusta = domyślna przeglądarka Windows.</summary>
+    public static string BrowserPath { get; set; } = "";
+
+    /// <summary>Wywoływane przy otwieraniu linku (nakładka pokazuje „Otwieram: …”).</summary>
+    public static event Action<Uri>? Opening;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
+
+    /// <summary>
+    /// Otwiera adres (tylko http/https) w przeglądarce — w tle, żeby nie blokować nakładki.
+    /// AllowSetForegroundWindow pozwala przeglądarce wyjść na pierwszy plan nad grą
+    /// (bez tego Windows zostawia jej okno w tle, bo nakładka sama nigdy nie jest aktywna).
+    /// </summary>
     public static bool Open(Uri uri)
     {
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return false;
-        try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); return true; }
-        catch { return false; }
+        AllowSetForegroundWindow(-1);   // ASFW_ANY
+        Opening?.Invoke(uri);
+        var url = uri.AbsoluteUri;
+        var browser = BrowserPath;
+        Task.Run(() =>
+        {
+            try
+            {
+                if (browser != "" && System.IO.File.Exists(browser))
+                    Process.Start(new ProcessStartInfo(browser) { ArgumentList = { url }, UseShellExecute = false });
+                else
+                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch
+            {
+                try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
+            }
+        });
+        return true;
+    }
+
+    /// <summary>Zainstalowane przeglądarki (nazwa, ścieżka) z rejestru App Paths.</summary>
+    public static List<(string name, string path)> InstalledBrowsers()
+    {
+        var list = new List<(string, string)>();
+        foreach (var (name, exe) in new[] { ("Google Chrome", "chrome.exe"), ("Microsoft Edge", "msedge.exe"), ("Mozilla Firefox", "firefox.exe"),
+                                             ("Opera", "opera.exe"), ("Brave", "brave.exe"), ("Vivaldi", "vivaldi.exe") })
+        {
+            foreach (var root in new[] { Microsoft.Win32.Registry.CurrentUser, Microsoft.Win32.Registry.LocalMachine })
+            {
+                try
+                {
+                    using var k = root.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\" + exe);
+                    if (k?.GetValue(null) is string p && System.IO.File.Exists(p.Trim('"'))) { list.Add((name, p.Trim('"'))); break; }
+                }
+                catch { }
+            }
+        }
+        return list;
     }
 
     /// <summary>Krótka, czytelna postać: domena + początek ścieżki (żeby było widać, dokąd prowadzi).</summary>

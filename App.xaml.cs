@@ -125,6 +125,7 @@ public partial class App : Application
         Binds = new BindManager(Cfg);
         Binds.PeekPressed += StartPeek;
         Binds.OpenLinkPressed += OpenLastLink;
+        Links.Opening += u => Dispatcher.BeginInvoke(() => _win.View.AddNotice(new(T("Otwieram: {0}", Links.Display(u)), NoticeKind.Info)));
         Binds.StoppedAll += () => Voice.Stop();
         _peekTimer.Tick += (_, _) => CheckPeekRelease();
         BuildTray();
@@ -345,7 +346,7 @@ public partial class App : Application
             _win.View.AddNotice(new(T("Nikt jeszcze nie wysłał linku w tej sesji."), NoticeKind.Info));
             return;
         }
-        if (Links.Open(LastLink)) _win.View.AddNotice(new(T("Otwieram: {0}", Links.Display(LastLink)), NoticeKind.Info));
+        Links.Open(LastLink);
     }
 
     // ---------- podgląd pod klawiszem ----------
@@ -517,6 +518,7 @@ public partial class App : Application
         Cfg.Save();
         Sounds.Volume = Cfg.Volume;
         Sounds.Files = new(Cfg.SoundFiles);
+        Links.BrowserPath = Cfg.LinkBrowser;
         if (!BindCapture) Binds.Register();
         // Profil mógł zostać zmieniony lub usunięty w ustawieniach.
         if (ActiveProfile != null && !Cfg.Profiles.Contains(ActiveProfile)) ActiveProfile = null;

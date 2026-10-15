@@ -512,6 +512,9 @@ public static class Translations
         ["Otwórz link:"] = "Open link:",
         ["Nie przypisano — np. Ctrl+Alt+L."] = "Not assigned — e.g. Ctrl+Alt+L.",
         ["Otwórz ostatni link"] = "Open last link",
+        ["Domyślna przeglądarka Windows"] = "Windows default browser",
+        ["Otwieraj linki w"] = "Open links in",
+        ["Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."] = "A browser that's already running opens fastest — the link goes straight into a new tab.",
     };
 
     /// <summary>Tłumaczenia niemieckie: klucz = tekst polski.</summary>
@@ -1024,5 +1027,8 @@ public static class Translations
         ["Otwórz link:"] = "Link öffnen:",
         ["Nie przypisano — np. Ctrl+Alt+L."] = "Nicht zugewiesen — z. B. Strg+Alt+L.",
         ["Otwórz ostatni link"] = "Letzten Link öffnen",
+        ["Domyślna przeglądarka Windows"] = "Standardbrowser von Windows",
+        ["Otwieraj linki w"] = "Links öffnen in",
+        ["Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."] = "Am schnellsten öffnet sich ein Browser, der bereits läuft — der Link landet sofort in einem neuen Tab.",
     };
 }

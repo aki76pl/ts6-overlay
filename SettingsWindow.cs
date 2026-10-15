@@ -707,6 +707,14 @@ public sealed class SettingsWindow : Window
                             "Linki w powiadomieniach otworzysz też myszą: przytrzymaj Ctrl nad nakładką i kliknij link. Otwierane są tylko adresy http/https."));
         _linkRow = new ContentControl();
         p.Children.Add(_linkRow);
+        var browsers = Links.InstalledBrowsers();
+        var bcombo = new ComboBox { MinWidth = 260 };
+        bcombo.Items.Add(T("Domyślna przeglądarka Windows"));
+        foreach (var b in browsers) bcombo.Items.Add(b.name);
+        bcombo.SelectedIndex = Math.Max(0, browsers.FindIndex(b => b.path.Equals(_cfg.LinkBrowser, StringComparison.OrdinalIgnoreCase)) + 1);
+        bcombo.SelectionChanged += (_, _) => { _cfg.LinkBrowser = bcombo.SelectedIndex <= 0 ? "" : browsers[bcombo.SelectedIndex - 1].path; Changed(); };
+        p.Children.Add(Row(Label("Otwieraj linki w", 140), bcombo));
+        p.Children.Add(Hint("Najszybciej otwiera się przeglądarka, która już działa — wtedy link trafia do nowej karty od razu."));
 
         p.Children.Add(Header("Gdzie grać dźwięki bindów"));
         var dev = new ComboBox { MinWidth = 300 };
